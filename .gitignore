@@ -1,0 +1,9 @@
+node_modules
+dist
+*.tsbuildinfo
+.env
+server/.env
+server/dev.db
+server/prisma/dev.db
+*.db-journal
+.DS_Store

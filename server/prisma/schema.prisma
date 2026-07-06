@@ -1,0 +1,81 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String          @id @default(cuid())
+  email        String          @unique
+  name         String?
+  passwordHash String
+  createdAt    DateTime        @default(now())
+  favorites    Favorite[]
+  legendary    Legendary[]
+  watchlist    WatchlistItem[]
+  watched      WatchedItem[]
+}
+
+model Favorite {
+  id      String   @id @default(cuid())
+  userId  String
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tmdbId  Int
+  addedAt DateTime @default(now())
+
+  @@unique([userId, tmdbId])
+  @@index([userId])
+}
+
+model Legendary {
+  id      String   @id @default(cuid())
+  userId  String
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tmdbId  Int
+  addedAt DateTime @default(now())
+
+  @@unique([userId, tmdbId])
+  @@index([userId])
+}
+
+model WatchlistItem {
+  id      String   @id @default(cuid())
+  userId  String
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tmdbId  Int
+  addedAt DateTime @default(now())
+
+  @@unique([userId, tmdbId])
+  @@index([userId])
+}
+
+model WatchedItem {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tmdbId    Int
+  watchedAt DateTime @default(now())
+  rating    Int?
+  notes     String?
+
+  @@unique([userId, tmdbId])
+  @@index([userId, watchedAt])
+}
+
+model CachedMovie {
+  tmdbId       Int      @id
+  title        String
+  originalTitle String?
+  overview     String   @default("")
+  posterPath   String?
+  backdropPath String?
+  releaseDate  String?
+  voteAverage  Float    @default(0)
+  runtime      Int?
+  tagline      String?
+  genres       String   @default("[]")
+  cachedAt     DateTime @default(now())
+}
