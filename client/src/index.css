@@ -652,3 +652,196 @@ button.star-rating__star:hover {
   margin-top: 1.1rem;
   width: 100%;
 }
+
+/* ── Tags ── */
+.tag-editor__chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: 0.65rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  min-height: 2.75rem;
+}
+
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem 0.25rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid rgba(201, 162, 39, 0.3);
+  background: rgba(201, 162, 39, 0.1);
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  color: var(--color-ember-light);
+}
+
+.tag-chip__remove {
+  border: none;
+  background: none;
+  color: var(--color-mist);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 0.1rem;
+  transition: color 0.15s;
+}
+
+.tag-chip__remove:hover {
+  color: var(--color-blood);
+}
+
+.tag-editor__input {
+  flex: 1;
+  min-width: 6rem;
+  border: none;
+  background: transparent;
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+  color: var(--color-fog);
+  outline: none;
+}
+
+.tag-editor__input::placeholder {
+  color: rgba(138, 130, 150, 0.5);
+}
+
+.tag-editor__suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.65rem;
+}
+
+.tag-suggestion {
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  color: var(--color-mist);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.tag-suggestion:hover {
+  border-color: rgba(201, 162, 39, 0.3);
+  color: var(--color-ember-light);
+}
+
+/* ── Custom lists ── */
+.list-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.15rem;
+  border-radius: 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(26, 26, 38, 0.6);
+  transition: border-color 0.2s, background 0.2s, transform 0.2s;
+}
+
+.list-card:hover {
+  border-color: rgba(201, 162, 39, 0.25);
+  background: rgba(26, 26, 38, 0.9);
+}
+
+.list-card--compact {
+  text-decoration: none;
+  color: inherit;
+}
+
+.list-card__link {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex: 1;
+  min-width: 0;
+  text-decoration: none;
+  color: inherit;
+}
+
+.list-card__emoji {
+  font-size: 1.75rem;
+  line-height: 1;
+}
+
+.list-card__title {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 1rem;
+  color: var(--color-fog);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.list-card__count {
+  margin: 0.15rem 0 0;
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  color: var(--color-mist);
+}
+
+.list-card__delete {
+  position: absolute;
+  right: 0.65rem;
+  top: 0.65rem;
+  border: none;
+  background: none;
+  color: var(--color-mist);
+  font-size: 1.1rem;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s;
+}
+
+.list-card:hover .list-card__delete {
+  opacity: 1;
+}
+
+.list-card__delete:hover {
+  color: var(--color-blood);
+}
+
+.list-form {
+  max-width: 24rem;
+  padding: 1.25rem;
+  border-radius: 0.85rem;
+  border: 1px solid rgba(201, 162, 39, 0.15);
+  background: rgba(26, 26, 38, 0.5);
+}
+
+.list-form__emoji-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.list-form__emoji {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.list-form__emoji--active {
+  border-color: rgba(201, 162, 39, 0.5);
+  background: rgba(201, 162, 39, 0.12);
+}
+
+.data-panel {
+  padding: 1.5rem;
+  border-radius: 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(26, 26, 38, 0.4);
+}

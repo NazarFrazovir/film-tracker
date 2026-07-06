@@ -52,14 +52,26 @@ router.get("/:tmdbId", optionalAuth, async (req: AuthedRequest, res) => {
       watchedAt: null as string | null,
     };
 
+    let tags: { id: string; name: string }[] = [];
+    let customListIds: string[] = [];
+
     if (req.user) {
       const userId = req.user.userId;
-      const [favorite, legendary, watchlist, watched] = await Promise.all([
-        prisma.favorite.findUnique({ where: { userId_tmdbId: { userId, tmdbId } } }),
-        prisma.legendary.findUnique({ where: { userId_tmdbId: { userId, tmdbId } } }),
-        prisma.watchlistItem.findUnique({ where: { userId_tmdbId: { userId, tmdbId } } }),
-        prisma.watchedItem.findUnique({ where: { userId_tmdbId: { userId, tmdbId } } }),
-      ]);
+      const [favorite, legendary, watchlist, watched, movieTags, listItems] =
+        await Promise.all([
+          prisma.favorite.findUnique({ where: { userId_tmdbId: { userId, tmdbId } } }),
+          prisma.legendary.findUnique({ where: { userId_tmdbId: { userId, tmdbId } } }),
+          prisma.watchlistItem.findUnique({ where: { userId_tmdbId: { userId, tmdbId } } }),
+          prisma.watchedItem.findUnique({ where: { userId_tmdbId: { userId, tmdbId } } }),
+          prisma.movieTag.findMany({
+            where: { userId, tmdbId },
+            include: { tag: true },
+          }),
+          prisma.customListItem.findMany({
+            where: { tmdbId, list: { userId } },
+            select: { listId: true },
+          }),
+        ]);
 
       collections = {
         favorites: !!favorite,
@@ -70,9 +82,12 @@ router.get("/:tmdbId", optionalAuth, async (req: AuthedRequest, res) => {
         notes: watched?.notes ?? null,
         watchedAt: watched?.watchedAt.toISOString() ?? null,
       };
+
+      tags = movieTags.map((mt) => ({ id: mt.tag.id, name: mt.tag.name }));
+      customListIds = listItems.map((i) => i.listId);
     }
 
-    res.json({ movie, collections });
+    res.json({ movie, collections, tags, customListIds });
   } catch {
     res.status(404).json({ error: "Фільм не знайдено" });
   }

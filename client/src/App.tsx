@@ -7,6 +7,8 @@ import { LoginPage } from "./pages/LoginPage";
 import { MoviePage } from "./pages/MoviePage";
 import { RegisterPage } from "./pages/RegisterPage";
 import { SearchPage } from "./pages/SearchPage";
+import { ListDetailPage } from "./pages/ListDetailPage";
+import { ListsPage } from "./pages/ListsPage";
 import { StatsPage } from "./pages/StatsPage";
 
 export default function App() {
@@ -38,6 +40,22 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <StatsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/lists"
+              element={
+                <ProtectedRoute>
+                  <ListsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/lists/:id"
+              element={
+                <ProtectedRoute>
+                  <ListDetailPage />
                 </ProtectedRoute>
               }
             />

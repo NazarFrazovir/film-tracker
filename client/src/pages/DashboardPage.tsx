@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
 import { CollectionSection } from "../components/CollectionSection";
+import { CustomListsPreview } from "../components/CustomListsPreview";
 import { HeroBanner } from "../components/HeroBanner";
 import { TonightModal } from "../components/TonightModal";
 import { useAuth } from "../context/AuthContext";
@@ -74,6 +75,7 @@ export function DashboardPage() {
         <CollectionSection type="legendary" count={summary?.legendary} />
         <CollectionSection type="watched" count={summary?.watched} />
         <CollectionSection type="watchlist" count={summary?.watchlist} />
+        <CustomListsPreview />
       </div>
 
       <TonightModal open={tonightOpen} onClose={() => setTonightOpen(false)} />

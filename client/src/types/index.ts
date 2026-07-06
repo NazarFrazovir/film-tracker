@@ -66,6 +66,56 @@ export interface CollectionState {
   watchedAt: string | null;
 }
 
+export interface MovieTag {
+  id: string;
+  name: string;
+}
+
+export interface CustomListSummary {
+  id: string;
+  name: string;
+  emoji: string | null;
+  color: string | null;
+  itemCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CustomListDetail {
+  id: string;
+  name: string;
+  emoji: string | null;
+  color: string | null;
+  items: CollectionEntry[];
+}
+
+export interface TagSummary {
+  id: string;
+  name: string;
+  movieCount: number;
+}
+
+export interface ExportData {
+  version: number;
+  exportedAt: string;
+  favorites: number[];
+  legendary: number[];
+  watchlist: number[];
+  watched: {
+    tmdbId: number;
+    rating: number | null;
+    notes: string | null;
+    watchedAt: string;
+  }[];
+  customLists: {
+    name: string;
+    emoji: string | null;
+    color: string | null;
+    items: number[];
+  }[];
+  tags: { name: string; movies: number[] }[];
+}
+
 export type CollectionType = "favorites" | "legendary" | "watchlist" | "watched";
 
 export interface CollectionEntry {

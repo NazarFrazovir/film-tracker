@@ -2,7 +2,9 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
 import { api, getImageUrl } from "../api/client";
 import { CastRow } from "../components/CastRow";
+import { CustomListPicker } from "../components/CustomListPicker";
 import { MovieActions } from "../components/MovieActions";
+import { TagEditor } from "../components/TagEditor";
 import { RatingBadge } from "../components/RatingBadge";
 import { RatingCompare } from "../components/RatingCompare";
 import { MovieRow } from "../components/MovieRow";
@@ -56,7 +58,7 @@ export function MoviePage() {
     );
   }
 
-  const { movie, collections } = data;
+  const { movie, collections, tags, customListIds } = data;
   const poster = getImageUrl(movie.poster_path, "w500");
   const backdrop = getImageUrl(movie.backdrop_path, "w780");
   const year = movie.release_date?.slice(0, 4);
@@ -152,6 +154,18 @@ export function MoviePage() {
             <MovieActions
               tmdbId={tmdbId}
               initial={collections}
+              isLoggedIn={!!user}
+            />
+
+            <CustomListPicker
+              tmdbId={tmdbId}
+              initialListIds={customListIds}
+              isLoggedIn={!!user}
+            />
+
+            <TagEditor
+              tmdbId={tmdbId}
+              initialTags={tags}
               isLoggedIn={!!user}
             />
           </div>

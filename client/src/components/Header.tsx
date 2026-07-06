@@ -5,6 +5,7 @@ const NAV = [
   { to: "/", label: "Моя колекція" },
   { to: "/search", label: "Пошук" },
   { to: "/stats", label: "Статистика" },
+  { to: "/lists", label: "Списки" },
 ];
 
 export function Header() {
@@ -27,7 +28,8 @@ export function Header() {
                 key={item.to}
                 to={item.to}
                 className={`rounded-lg px-3 py-2 font-ui text-[11px] font-medium uppercase tracking-wider transition md:px-4 ${
-                  location.pathname === item.to
+                  location.pathname === item.to ||
+                  (item.to === "/lists" && location.pathname.startsWith("/lists"))
                     ? "bg-ember/10 text-ember-light"
                     : "text-mist hover:text-fog"
                 }`}

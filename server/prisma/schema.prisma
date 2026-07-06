@@ -17,6 +17,9 @@ model User {
   legendary    Legendary[]
   watchlist    WatchlistItem[]
   watched      WatchedItem[]
+  customLists  CustomList[]
+  tags         Tag[]
+  movieTags    MovieTag[]
 }
 
 model Favorite {
@@ -63,6 +66,58 @@ model WatchedItem {
 
   @@unique([userId, tmdbId])
   @@index([userId, watchedAt])
+}
+
+model CustomList {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  emoji     String?
+  color     String?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  items     CustomListItem[]
+
+  @@index([userId])
+}
+
+model CustomListItem {
+  id       String     @id @default(cuid())
+  listId   String
+  list     CustomList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  tmdbId   Int
+  position Int        @default(0)
+  addedAt  DateTime   @default(now())
+
+  @@unique([listId, tmdbId])
+  @@index([listId, position])
+}
+
+model Tag {
+  id        String     @id @default(cuid())
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  createdAt DateTime   @default(now())
+  movies    MovieTag[]
+
+  @@unique([userId, name])
+  @@index([userId])
+}
+
+model MovieTag {
+  id      String   @id @default(cuid())
+  userId  String
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tmdbId  Int
+  tagId   String
+  tag     Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  addedAt DateTime @default(now())
+
+  @@unique([userId, tmdbId, tagId])
+  @@index([userId, tmdbId])
+  @@index([tagId])
 }
 
 model CachedMovie {
