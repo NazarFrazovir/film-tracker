@@ -34,13 +34,23 @@ router.post("/register", async (req, res) => {
 
   const passwordHash = await bcrypt.hash(password, 10);
   const user = await prisma.user.create({
-    data: { email, passwordHash, name: name ?? null },
+    data: {
+      email,
+      passwordHash,
+      name: name ?? null,
+      onboardingCompleted: false,
+    },
   });
 
   const token = signToken({ userId: user.id, email: user.email });
   res.cookie(COOKIE_NAME, token, getCookieOptions());
   res.json({
-    user: { id: user.id, email: user.email, name: user.name },
+    user: {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      onboardingCompleted: user.onboardingCompleted,
+    },
   });
 });
 
@@ -62,7 +72,12 @@ router.post("/login", async (req, res) => {
   const token = signToken({ userId: user.id, email: user.email });
   res.cookie(COOKIE_NAME, token, getCookieOptions());
   res.json({
-    user: { id: user.id, email: user.email, name: user.name },
+    user: {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      onboardingCompleted: user.onboardingCompleted,
+    },
   });
 });
 
@@ -74,7 +89,13 @@ router.post("/logout", (_req, res) => {
 router.get("/me", requireAuth, async (req: AuthedRequest, res) => {
   const user = await prisma.user.findUnique({
     where: { id: req.user!.userId },
-    select: { id: true, email: true, name: true, createdAt: true },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      onboardingCompleted: true,
+      createdAt: true,
+    },
   });
 
   if (!user) {

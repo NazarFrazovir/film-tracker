@@ -17,5 +17,15 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
 
+  const onOnboarding = location.pathname === "/onboarding";
+
+  if (!user.onboardingCompleted && !onOnboarding) {
+    return <Navigate to="/onboarding" replace />;
+  }
+
+  if (user.onboardingCompleted && onOnboarding) {
+    return <Navigate to="/" replace />;
+  }
+
   return children;
 }

@@ -45,6 +45,17 @@ export function Header() {
               <span className="hidden font-ui text-[11px] text-mist/70 md:inline">
                 {user.name || user.email}
               </span>
+              <Link
+                to="/settings"
+                className={`rounded-lg px-2 py-2 font-ui text-[11px] transition md:px-3 ${
+                  location.pathname === "/settings"
+                    ? "text-ember-light"
+                    : "text-mist hover:text-fog"
+                }`}
+                title="Налаштування"
+              >
+                ⚙
+              </Link>
               <button
                 type="button"
                 onClick={() => logout()}

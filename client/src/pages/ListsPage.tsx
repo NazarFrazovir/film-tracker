@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
-import { ExportImportPanel } from "../components/ExportImportPanel";
 import { ListFormFields } from "../components/ListFormFields";
 import { toast } from "../components/Toast";
 import { listCardStyle } from "../lib/listConstants";
@@ -171,9 +170,6 @@ export function ListsPage() {
         </div>
       )}
 
-      <div className="mt-16">
-        <ExportImportPanel />
-      </div>
     </div>
   );
 }

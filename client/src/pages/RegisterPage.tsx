@@ -19,7 +19,7 @@ export function RegisterPage() {
     setLoading(true);
     try {
       await register(email, password, name || undefined);
-      navigate("/", { replace: true });
+      navigate("/onboarding", { replace: true });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Помилка реєстрації");
     } finally {

@@ -1,25 +1,28 @@
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Header } from "./components/Header";
 import { ToastContainer } from "./components/Toast";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { DashboardPage } from "./pages/DashboardPage";
 import { LoginPage } from "./pages/LoginPage";
 import { MoviePage } from "./pages/MoviePage";
+import { OnboardingPage } from "./pages/OnboardingPage";
 import { RegisterPage } from "./pages/RegisterPage";
 import { SearchPage } from "./pages/SearchPage";
 import { ListDetailPage } from "./pages/ListDetailPage";
 import { ListsPage } from "./pages/ListsPage";
+import { SettingsPage } from "./pages/SettingsPage";
 import { StatsPage } from "./pages/StatsPage";
 import { TagDetailPage } from "./pages/TagDetailPage";
 import { TagsPage } from "./pages/TagsPage";
 
-export default function App() {
+function AppShell() {
+  const location = useLocation();
+  const minimalChrome = location.pathname === "/onboarding";
+
   return (
-    <BrowserRouter>
-      <div className="ambient-bg" />
-      <div className="relative z-10 min-h-screen">
-        <Header />
-        <main>
+    <>
+      {!minimalChrome && <Header />}
+      <main>
           <Routes>
             <Route
               path="/"
@@ -77,13 +80,39 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/settings"
+              element={
+                <ProtectedRoute>
+                  <SettingsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/onboarding"
+              element={
+                <ProtectedRoute>
+                  <OnboardingPage />
+                </ProtectedRoute>
+              }
+            />
             <Route path="/movie/:id" element={<MoviePage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
-        </main>
-        <ToastContainer />
+      </main>
+      <ToastContainer />
+    </>
+  );
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <div className="ambient-bg" />
+      <div className="relative z-10 min-h-screen">
+        <AppShell />
       </div>
     </BrowserRouter>
   );

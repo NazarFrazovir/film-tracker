@@ -52,6 +52,28 @@ export const api = {
     me: () => request<{ user: User }>("/api/auth/me"),
   },
 
+  settings: {
+    updateProfile: (name: string | null) =>
+      request<{ user: User }>("/api/settings/profile", {
+        method: "PATCH",
+        body: JSON.stringify({ name }),
+      }),
+    changePassword: (currentPassword: string, newPassword: string) =>
+      request<{ success: boolean }>("/api/settings/password", {
+        method: "PATCH",
+        body: JSON.stringify({ currentPassword, newPassword }),
+      }),
+    deleteAccount: (password: string) =>
+      request<{ success: boolean }>("/api/settings/account", {
+        method: "DELETE",
+        body: JSON.stringify({ password }),
+      }),
+    completeOnboarding: () =>
+      request<{ user: User }>("/api/settings/onboarding/complete", {
+        method: "POST",
+      }),
+  },
+
   movies: {
     search: (q: string, page = 1) =>
       request<{
