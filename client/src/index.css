@@ -1169,6 +1169,217 @@ button.star-rating__star:hover {
   opacity: 1;
 }
 
+/* ── Discover filters ── */
+.discover-filters {
+  margin-bottom: 2rem;
+  padding: 1.1rem 1.15rem 1.2rem;
+  border-radius: 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.04) 0%,
+    rgba(201, 162, 39, 0.03) 100%
+  );
+}
+
+.discover-filters__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.discover-filters__reset {
+  border: none;
+  background: none;
+  color: var(--color-ember);
+  font-family: var(--font-ui);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.discover-filters__reset:hover {
+  color: var(--color-ember-light);
+}
+
+.discover-filters__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+@media (min-width: 640px) {
+  .discover-filters__grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .discover-filters__grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+.discover-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.discover-filter--toggle {
+  grid-column: 1 / -1;
+}
+
+@media (min-width: 1024px) {
+  .discover-filter--toggle {
+    grid-column: auto;
+    justify-content: flex-end;
+  }
+}
+
+.discover-filter__label {
+  font-family: var(--font-ui);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(138, 130, 150, 0.85);
+}
+
+.discover-filter--active .discover-filter__label {
+  color: var(--color-ember);
+}
+
+.discover-filter__control {
+  position: relative;
+}
+
+.discover-filter__control::after {
+  content: "";
+  position: absolute;
+  right: 0.85rem;
+  top: 50%;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-right: 1.5px solid rgba(138, 130, 150, 0.8);
+  border-bottom: 1.5px solid rgba(138, 130, 150, 0.8);
+  transform: translateY(-65%) rotate(45deg);
+  pointer-events: none;
+}
+
+.discover-filter__select {
+  width: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+  padding: 0.65rem 2.25rem 0.65rem 0.85rem;
+  border-radius: 0.55rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(10, 10, 16, 0.55);
+  color: var(--color-fog);
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+  line-height: 1.3;
+  outline: none;
+  cursor: pointer;
+  transition:
+    border-color 0.2s,
+    background 0.2s,
+    box-shadow 0.2s;
+}
+
+.discover-filter__select:hover {
+  border-color: rgba(201, 162, 39, 0.25);
+  background: rgba(201, 162, 39, 0.04);
+}
+
+.discover-filter__select:focus {
+  border-color: rgba(201, 162, 39, 0.45);
+  box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.1);
+}
+
+.discover-filter--active .discover-filter__select {
+  border-color: rgba(201, 162, 39, 0.35);
+  background: rgba(201, 162, 39, 0.06);
+  color: var(--color-ember-light);
+}
+
+.discover-filter__select option {
+  background: var(--color-obsidian);
+  color: var(--color-fog);
+}
+
+.discover-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  border-radius: 0.55rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(10, 10, 16, 0.55);
+  cursor: pointer;
+  transition:
+    border-color 0.2s,
+    background 0.2s;
+}
+
+.discover-toggle:hover {
+  border-color: rgba(201, 162, 39, 0.25);
+  background: rgba(201, 162, 39, 0.04);
+}
+
+.discover-toggle--active {
+  border-color: rgba(201, 162, 39, 0.4);
+  background: rgba(201, 162, 39, 0.08);
+}
+
+.discover-toggle__track {
+  position: relative;
+  flex-shrink: 0;
+  width: 2.1rem;
+  height: 1.2rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  transition: background 0.2s;
+}
+
+.discover-toggle--active .discover-toggle__track {
+  background: rgba(201, 162, 39, 0.45);
+}
+
+.discover-toggle__thumb {
+  position: absolute;
+  top: 0.15rem;
+  left: 0.15rem;
+  width: 0.9rem;
+  height: 0.9rem;
+  border-radius: 999px;
+  background: var(--color-fog);
+  transition: transform 0.2s, background 0.2s;
+}
+
+.discover-toggle--active .discover-toggle__thumb {
+  transform: translateX(0.9rem);
+  background: var(--color-ember-light);
+}
+
+.discover-toggle__text {
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  color: var(--color-mist);
+  text-align: left;
+  transition: color 0.2s;
+}
+
+.discover-toggle--active .discover-toggle__text {
+  color: var(--color-ember-light);
+}
+
 /* ── Bulk search select ── */
 .bulk-toolbar {
   display: flex;

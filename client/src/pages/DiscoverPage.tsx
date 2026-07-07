@@ -2,17 +2,9 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { api } from "../api/client";
 import { moviesApi } from "../api/movies";
+import { DiscoverFiltersBar } from "../components/DiscoverFiltersBar";
 import { SearchMovieCard } from "../components/SearchMovieCard";
 import type { DiscoverFilters } from "../types";
-
-const SORT_OPTIONS = [
-  { value: "popularity.desc", label: "Популярність" },
-  { value: "vote_average.desc", label: "Рейтинг" },
-  { value: "release_date.desc", label: "Новіші" },
-  { value: "release_date.asc", label: "Старіші" },
-];
-
-const CURRENT_YEAR = new Date().getFullYear();
 
 export function DiscoverPage() {
   const [genreId, setGenreId] = useState<number | undefined>();
@@ -83,87 +75,25 @@ export function DiscoverPage() {
         Фільтруйте за жанром, роком і рейтингом — знайдіть те, чого ще немає у вашій колекції
       </p>
 
-      <div className="mb-8 flex flex-wrap gap-3">
-        <select
-          value={genreId ?? ""}
-          onChange={(e) =>
-            setGenreId(e.target.value ? Number(e.target.value) : undefined)
-          }
-          className="input-field w-auto min-w-[140px]"
-        >
-          <option value="">Усі жанри</option>
-          {[
-            { id: 28, name: "Бойовик" },
-            { id: 12, name: "Пригоди" },
-            { id: 16, name: "Анімація" },
-            { id: 35, name: "Комедія" },
-            { id: 80, name: "Кримінал" },
-            { id: 99, name: "Документальний" },
-            { id: 18, name: "Драма" },
-            { id: 14, name: "Фентезі" },
-            { id: 27, name: "Жахи" },
-            { id: 10749, name: "Мелодрама" },
-            { id: 878, name: "Фантастика" },
-            { id: 53, name: "Трилер" },
-          ].map((g) => (
-            <option key={g.id} value={g.id}>
-              {g.name}
-            </option>
-          ))}
-        </select>
-
-        <select
-          value={year ?? ""}
-          onChange={(e) =>
-            setYear(e.target.value ? Number(e.target.value) : undefined)
-          }
-          className="input-field w-auto min-w-[120px]"
-        >
-          <option value="">Будь-який рік</option>
-          {Array.from({ length: 30 }, (_, i) => CURRENT_YEAR - i).map((y) => (
-            <option key={y} value={y}>
-              {y}
-            </option>
-          ))}
-        </select>
-
-        <select
-          value={minRating ?? ""}
-          onChange={(e) =>
-            setMinRating(e.target.value ? Number(e.target.value) : undefined)
-          }
-          className="input-field w-auto min-w-[130px]"
-        >
-          <option value="">Будь-який рейтинг</option>
-          {[6, 7, 8, 9].map((r) => (
-            <option key={r} value={r}>
-              від {r}+
-            </option>
-          ))}
-        </select>
-
-        <select
-          value={sortBy}
-          onChange={(e) => setSortBy(e.target.value)}
-          className="input-field w-auto min-w-[140px]"
-        >
-          {SORT_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
-
-        <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-white/10 px-3 py-2 font-ui text-[11px] text-mist">
-          <input
-            type="checkbox"
-            checked={excludeOwned}
-            onChange={(e) => setExcludeOwned(e.target.checked)}
-            className="accent-ember"
-          />
-          Без моїх фільмів
-        </label>
-      </div>
+      <DiscoverFiltersBar
+        genreId={genreId}
+        year={year}
+        minRating={minRating}
+        sortBy={sortBy}
+        excludeOwned={excludeOwned}
+        onGenreChange={setGenreId}
+        onYearChange={setYear}
+        onMinRatingChange={setMinRating}
+        onSortChange={setSortBy}
+        onExcludeOwnedChange={setExcludeOwned}
+        onReset={() => {
+          setGenreId(undefined);
+          setYear(undefined);
+          setMinRating(undefined);
+          setSortBy("popularity.desc");
+          setExcludeOwned(false);
+        }}
+      />
 
       {isPending ? (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
