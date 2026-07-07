@@ -1,6 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
+import { toast } from "../components/Toast";
 
 function filmCount(n: number): string {
   if (n === 1) return "1 фільм";
@@ -9,9 +10,20 @@ function filmCount(n: number): string {
 }
 
 export function TagsPage() {
+  const queryClient = useQueryClient();
+
   const { data: tags, isLoading } = useQuery({
     queryKey: ["tags"],
     queryFn: () => api.tags.all(),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.tags.remove(id),
+    onSuccess: () => {
+      toast("Тег видалено");
+      queryClient.invalidateQueries({ queryKey: ["tags"] });
+    },
+    onError: (err: Error) => toast(err.message),
   });
 
   return (
@@ -19,7 +31,7 @@ export function TagsPage() {
       <span className="label">Організація</span>
       <h1 className="title-section mt-1">Мої теги</h1>
       <p className="meta-line mt-2 mb-10">
-        Теги додаються на сторінці фільму — тут можна переглянути всі фільми за тегом
+        Теги додаються на сторінці фільму — тут можна переглянути або видалити
       </p>
 
       {isLoading ? (
@@ -39,14 +51,24 @@ export function TagsPage() {
       ) : (
         <div className="flex flex-wrap gap-3">
           {tags.map((tag) => (
-            <Link
-              key={tag.id}
-              to={`/tags/${tag.id}`}
-              className="tag-chip tag-chip--link"
-            >
-              <span className="tag-chip__name">#{tag.name}</span>
-              <span className="tag-chip__count">{filmCount(tag.movieCount)}</span>
-            </Link>
+            <div key={tag.id} className="tag-chip tag-chip--with-action group">
+              <Link to={`/tags/${tag.id}`} className="tag-chip--link-inner">
+                <span className="tag-chip__name">#{tag.name}</span>
+                <span className="tag-chip__count">{filmCount(tag.movieCount)}</span>
+              </Link>
+              <button
+                type="button"
+                onClick={() => {
+                  if (confirm(`Видалити тег «${tag.name}» з усіх фільмів?`)) {
+                    deleteMutation.mutate(tag.id);
+                  }
+                }}
+                className="tag-chip__remove"
+                title="Видалити тег"
+              >
+                ×
+              </button>
+            </div>
           ))}
         </div>
       )}

@@ -1,10 +1,11 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { api } from "../api/client";
 import { filterAndSortItems, getUniqueGenres } from "../lib/collectionFilters";
 import { COLLECTION_META, type CollectionType, type SortOption } from "../types";
 import { CollectionFilters } from "./CollectionFilters";
 import { MovieCard } from "./MovieCard";
+import { toast } from "./Toast";
 
 interface CollectionSectionProps {
   type: CollectionType;
@@ -12,6 +13,7 @@ interface CollectionSectionProps {
 }
 
 export function CollectionSection({ type, count }: CollectionSectionProps) {
+  const queryClient = useQueryClient();
   const meta = COLLECTION_META[type];
   const [sort, setSort] = useState<SortOption>("date-desc");
   const [genre, setGenre] = useState("");
@@ -20,6 +22,18 @@ export function CollectionSection({ type, count }: CollectionSectionProps) {
   const { data, isLoading } = useQuery({
     queryKey: ["collection", type],
     queryFn: () => api.collections.list(type),
+  });
+
+  const removeMutation = useMutation({
+    mutationFn: (tmdbId: number) => api.collections.remove(type, tmdbId),
+    onSuccess: () => {
+      toast("Прибрано з колекції");
+      queryClient.invalidateQueries({ queryKey: ["collection", type] });
+      queryClient.invalidateQueries({ queryKey: ["summary"] });
+      queryClient.invalidateQueries({ queryKey: ["hero"] });
+      queryClient.invalidateQueries({ queryKey: ["stats"] });
+    },
+    onError: (err: Error) => toast(err.message),
   });
 
   const rawItems = data?.filter((i) => i.movie) ?? [];
@@ -75,11 +89,21 @@ export function CollectionSection({ type, count }: CollectionSectionProps) {
       ) : (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
           {items.map((item) => (
-            <MovieCard
-              key={item.tmdbId}
-              movie={item.movie!}
-              rating={type === "watched" ? item.rating : undefined}
-            />
+            <div key={item.tmdbId} className="group relative">
+              <MovieCard
+                movie={item.movie!}
+                rating={type === "watched" ? item.rating : undefined}
+              />
+              <button
+                type="button"
+                onClick={() => removeMutation.mutate(item.tmdbId)}
+                disabled={removeMutation.isPending}
+                className="absolute right-1 top-1 rounded-md bg-void/90 px-1.5 py-0.5 font-ui text-[10px] text-blood opacity-0 transition group-hover:opacity-100"
+                title="Прибрати"
+              >
+                ×
+              </button>
+            </div>
           ))}
         </div>
       )}

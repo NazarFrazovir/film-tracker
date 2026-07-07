@@ -6,6 +6,7 @@ import { ListFormFields } from "../components/ListFormFields";
 import { MovieCard } from "../components/MovieCard";
 import { toast } from "../components/Toast";
 import { listCardStyle } from "../lib/listConstants";
+import type { CollectionEntry } from "../types";
 
 function filmCount(n: number): string {
   if (n === 1) return "1 фільм";
@@ -24,6 +25,8 @@ export function ListDetailPage() {
   const [editName, setEditName] = useState("");
   const [editEmoji, setEditEmoji] = useState("📋");
   const [editColor, setEditColor] = useState<string | null>(null);
+  const [orderedItems, setOrderedItems] = useState<CollectionEntry[]>([]);
+  const [dragId, setDragId] = useState<number | null>(null);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["list", id],
@@ -38,6 +41,12 @@ export function ListDetailPage() {
       setEditColor(data.color);
     }
   }, [data, editing]);
+
+  useEffect(() => {
+    if (data) {
+      setOrderedItems(data.items.filter((i) => i.movie));
+    }
+  }, [data]);
 
   const removeMutation = useMutation({
     mutationFn: (tmdbId: number) => api.lists.removeItem(id!, tmdbId),
@@ -84,6 +93,14 @@ export function ListDetailPage() {
     onError: (err: Error) => toast(err.message),
   });
 
+  const reorderMutation = useMutation({
+    mutationFn: (tmdbIds: number[]) => api.lists.reorder(id!, tmdbIds),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["list", id] });
+    },
+    onError: (err: Error) => toast(err.message),
+  });
+
   const deleteSubMutation = useMutation({
     mutationFn: (subId: string) => api.lists.remove(subId),
     onSuccess: () => {
@@ -113,7 +130,19 @@ export function ListDetailPage() {
     );
   }
 
-  const items = data.items.filter((i) => i.movie);
+  const items = orderedItems;
+
+  function handleReorder(fromId: number, toId: number) {
+    if (fromId === toId) return;
+    const next = [...orderedItems];
+    const fromIdx = next.findIndex((i) => i.tmdbId === fromId);
+    const toIdx = next.findIndex((i) => i.tmdbId === toId);
+    if (fromIdx < 0 || toIdx < 0) return;
+    const [moved] = next.splice(fromIdx, 1);
+    next.splice(toIdx, 0, moved!);
+    setOrderedItems(next);
+    reorderMutation.mutate(next.map((i) => i.tmdbId));
+  }
   const backLink = data.parent ? `/lists/${data.parent.id}` : "/lists";
   const backLabel = data.parent
     ? `← ${data.parent.emoji ?? "📋"} ${data.parent.name}`
@@ -287,21 +316,39 @@ export function ListDetailPage() {
               : "Список порожній — знайдіть фільм і додайте до цього списку на його сторінці"}
           </p>
         ) : (
-          <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-            {items.map((item) => (
-              <div key={item.tmdbId} className="group relative">
-                <MovieCard movie={item.movie!} />
-                <button
-                  type="button"
-                  onClick={() => removeMutation.mutate(item.tmdbId)}
-                  className="absolute right-1 top-1 rounded-md bg-void/90 px-1.5 py-0.5 font-ui text-[10px] text-blood opacity-0 transition group-hover:opacity-100"
-                  title="Прибрати"
+          <>
+            <p className="meta-line mt-4">Перетягніть картки, щоб змінити порядок</p>
+            <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+              {items.map((item) => (
+                <div
+                  key={item.tmdbId}
+                  draggable
+                  onDragStart={() => setDragId(item.tmdbId)}
+                  onDragEnd={() => setDragId(null)}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={() => {
+                    if (dragId != null) handleReorder(dragId, item.tmdbId);
+                  }}
+                  className={`group relative cursor-grab active:cursor-grabbing ${
+                    dragId === item.tmdbId ? "list-item-dragging" : ""
+                  }`}
                 >
-                  ×
-                </button>
-              </div>
-            ))}
-          </div>
+                  <MovieCard movie={item.movie!} />
+                  <span className="list-item-drag-handle" title="Перетягнути">
+                    ⠿
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removeMutation.mutate(item.tmdbId)}
+                    className="absolute right-1 top-1 rounded-md bg-void/90 px-1.5 py-0.5 font-ui text-[10px] text-blood opacity-0 transition group-hover:opacity-100"
+                    title="Прибрати"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </section>
     </div>

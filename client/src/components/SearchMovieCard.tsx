@@ -25,6 +25,7 @@ const ACTION_TITLES: Record<CollectionType, string> = {
 
 interface SearchMovieCardProps {
   movie: TMDBMovie;
+  actionsDisabled?: boolean;
   initialStatus?: {
     favorites: boolean;
     legendary: boolean;
@@ -33,7 +34,11 @@ interface SearchMovieCardProps {
   };
 }
 
-export function SearchMovieCard({ movie, initialStatus }: SearchMovieCardProps) {
+export function SearchMovieCard({
+  movie,
+  initialStatus,
+  actionsDisabled = false,
+}: SearchMovieCardProps) {
   const queryClient = useQueryClient();
   const [active, setActive] = useState<Record<CollectionType, boolean>>({
     favorites: initialStatus?.favorites ?? false,
@@ -99,6 +104,7 @@ export function SearchMovieCard({ movie, initialStatus }: SearchMovieCardProps) 
         {year && <p className="font-ui text-[10px] text-mist/50">{year}</p>}
       </Link>
 
+      {!actionsDisabled && (
       <div className="absolute bottom-12 left-0 right-0 flex justify-center gap-1 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100 md:bottom-14">
         {ACTIONS.map(({ type, label, activeLabel }) => (
           <button
@@ -121,6 +127,7 @@ export function SearchMovieCard({ movie, initialStatus }: SearchMovieCardProps) 
           </button>
         ))}
       </div>
+      )}
     </div>
   );
 }

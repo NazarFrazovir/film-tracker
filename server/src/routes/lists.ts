@@ -254,6 +254,52 @@ router.post("/:id/items/:tmdbId", requireAuth, async (req: AuthedRequest, res) =
   res.json({ success: true, added: true });
 });
 
+const reorderSchema = z.object({
+  tmdbIds: z.array(z.number().int()).min(1),
+});
+
+router.patch("/:id/reorder", requireAuth, async (req: AuthedRequest, res) => {
+  const userId = req.user!.userId;
+  const id = String(req.params.id);
+  const parsed = reorderSchema.safeParse(req.body);
+
+  if (!parsed.success) {
+    res.status(400).json({ error: "Невірні дані" });
+    return;
+  }
+
+  const list = await prisma.customList.findFirst({ where: { id, userId } });
+  if (!list) {
+    res.status(404).json({ error: "Список не знайдено" });
+    return;
+  }
+
+  const existing = await prisma.customListItem.findMany({ where: { listId: id } });
+  const existingIds = new Set(existing.map((i) => i.tmdbId));
+  const { tmdbIds } = parsed.data;
+
+  if (
+    tmdbIds.length !== existing.length ||
+    !tmdbIds.every((tid) => existingIds.has(tid))
+  ) {
+    res.status(400).json({ error: "Невірний список фільмів" });
+    return;
+  }
+
+  await prisma.$transaction(
+    tmdbIds.map((tmdbId, position) =>
+      prisma.customListItem.update({
+        where: { listId_tmdbId: { listId: id, tmdbId } },
+        data: { position },
+      }),
+    ),
+  );
+
+  await prisma.customList.update({ where: { id }, data: { updatedAt: new Date() } });
+
+  res.json({ success: true });
+});
+
 router.delete("/:id/items/:tmdbId", requireAuth, async (req: AuthedRequest, res) => {
   const userId = req.user!.userId;
   const id = String(req.params.id);

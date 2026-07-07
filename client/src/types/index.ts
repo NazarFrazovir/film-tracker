@@ -50,6 +50,32 @@ export interface UserStats {
   ratedCount: number;
 }
 
+export interface DiaryDay {
+  date: string;
+  movies: {
+    tmdbId: number;
+    rating: number | null;
+    movie: TMDBMovie | null;
+  }[];
+}
+
+export interface YearReview {
+  year: number;
+  watchedCount: number;
+  ratedCount: number;
+  avgRating: number | null;
+  totalRuntime: number;
+  totalRuntimeFormatted: string;
+  topGenre: { name: string; count: number } | null;
+  topRated: { tmdbId: number; rating: number; movie: TMDBMovie | null }[];
+}
+
+export interface TonightFilters {
+  genre?: string;
+  maxRuntime?: number;
+  preferOld?: boolean;
+}
+
 export type SortOption =
   | "date-desc"
   | "date-asc"

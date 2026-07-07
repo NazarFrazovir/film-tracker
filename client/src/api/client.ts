@@ -5,13 +5,16 @@ import type {
   CollectionType,
   CustomListDetail,
   CustomListSummary,
+  DiaryDay,
   ExportData,
   MovieExtras,
   MovieTag,
   TMDBMovie,
   TagSummary,
+  TonightFilters,
   User,
   UserStats,
+  YearReview,
 } from "../types";
 
 class ApiError extends Error {
@@ -109,14 +112,27 @@ export const api = {
 
   stats: {
     get: () => request<UserStats>("/api/stats"),
+    diary: (month?: string) =>
+      request<{ days: DiaryDay[] }>(
+        `/api/stats/diary${month ? `?month=${encodeURIComponent(month)}` : ""}`,
+      ),
+    yearReview: (year: number) => request<YearReview>(`/api/stats/year/${year}`),
   },
 
   collections: {
     summary: () => request<CollectionSummary>("/api/collections/summary"),
     hero: () =>
       request<{ movie: TMDBMovie | null; tmdbId?: number }>("/api/collections/hero"),
-    tonight: () =>
-      request<{ movie: TMDBMovie | null; tmdbId?: number }>("/api/collections/tonight"),
+    tonight: (filters?: TonightFilters) => {
+      const params = new URLSearchParams();
+      if (filters?.genre) params.set("genre", filters.genre);
+      if (filters?.maxRuntime) params.set("maxRuntime", String(filters.maxRuntime));
+      if (filters?.preferOld) params.set("preferOld", "true");
+      const qs = params.toString();
+      return request<{ movie: TMDBMovie | null; tmdbId?: number; poolSize?: number }>(
+        `/api/collections/tonight${qs ? `?${qs}` : ""}`,
+      );
+    },
     list: (type: CollectionType) =>
       request<CollectionEntry[]>(`/api/collections/${type}`),
     add: (type: CollectionType, tmdbId: number) =>
@@ -168,6 +184,11 @@ export const api = {
       request(`/api/lists/${listId}/items/${tmdbId}`, { method: "POST" }),
     removeItem: (listId: string, tmdbId: number) =>
       request(`/api/lists/${listId}/items/${tmdbId}`, { method: "DELETE" }),
+    reorder: (listId: string, tmdbIds: number[]) =>
+      request<{ success: boolean }>(`/api/lists/${listId}/reorder`, {
+        method: "PATCH",
+        body: JSON.stringify({ tmdbIds }),
+      }),
   },
 
   tags: {
@@ -183,6 +204,8 @@ export const api = {
         method: "PUT",
         body: JSON.stringify({ tags }),
       }),
+    remove: (id: string) =>
+      request<{ success: boolean }>(`/api/tags/${id}`, { method: "DELETE" }),
   },
 
   data: {

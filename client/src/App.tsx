@@ -12,12 +12,15 @@ import { ListDetailPage } from "./pages/ListDetailPage";
 import { ListsPage } from "./pages/ListsPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { StatsPage } from "./pages/StatsPage";
+import { DiaryPage } from "./pages/DiaryPage";
 import { TagDetailPage } from "./pages/TagDetailPage";
 import { TagsPage } from "./pages/TagsPage";
+import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 
 function AppShell() {
   const location = useLocation();
   const minimalChrome = location.pathname === "/onboarding";
+  useKeyboardShortcuts();
 
   return (
     <>
@@ -45,6 +48,14 @@ function AppShell() {
               element={
                 <ProtectedRoute>
                   <StatsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/diary"
+              element={
+                <ProtectedRoute>
+                  <DiaryPage />
                 </ProtectedRoute>
               }
             />

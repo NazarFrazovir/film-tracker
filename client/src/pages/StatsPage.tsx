@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { api } from "../api/client";
 import { MovieCard } from "../components/MovieCard";
 
+const CURRENT_YEAR = new Date().getFullYear();
+
 function StatCard({
   label,
   value,
@@ -38,6 +40,11 @@ export function StatsPage() {
     queryFn: () => api.stats.get(),
   });
 
+  const { data: yearReview } = useQuery({
+    queryKey: ["year-review", CURRENT_YEAR],
+    queryFn: () => api.stats.yearReview(CURRENT_YEAR),
+  });
+
   if (isLoading) {
     return (
       <div className="mx-auto max-w-7xl px-4 py-24 md:px-8">
@@ -62,9 +69,15 @@ export function StatsPage() {
     <div className="mx-auto max-w-7xl px-4 pb-20 pt-8 md:px-8 md:pt-12">
       <span className="label">Аналітика</span>
       <h1 className="title-section mt-1">Моя статистика</h1>
-      <p className="meta-line mt-2 mb-10">
+      <p className="meta-line mt-2 mb-4">
         Скільки переглянули, які жанри любите, як оцінюєте
       </p>
+      <Link
+        to="/diary"
+        className="mb-10 inline-block font-ui text-[11px] uppercase tracking-wider text-ember hover:text-ember-light"
+      >
+        Календар переглядів →
+      </Link>
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
         <StatCard label="Переглянуто" value={data.watched} />
@@ -106,6 +119,54 @@ export function StatsPage() {
           }
         />
       </div>
+
+      {yearReview && yearReview.watchedCount > 0 && (
+        <section className="mt-14 rounded-xl border border-ember/15 bg-ember/5 p-6 md:p-8">
+          <span className="label">Year in Review</span>
+          <h2 className="title-section mt-1">{CURRENT_YEAR} у цифрах</h2>
+          <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-4">
+            <StatCard label="Переглянуто" value={yearReview.watchedCount} />
+            <StatCard
+              label="Середня оцінка"
+              value={yearReview.avgRating ?? "—"}
+              hint={
+                yearReview.ratedCount > 0
+                  ? `${yearReview.ratedCount} оцінок`
+                  : undefined
+              }
+            />
+            <StatCard
+              label="Час на кіно"
+              value={yearReview.totalRuntimeFormatted}
+            />
+            <StatCard
+              label="Топ жанр"
+              value={yearReview.topGenre?.name ?? "—"}
+              hint={
+                yearReview.topGenre
+                  ? `${yearReview.topGenre.count} фільмів`
+                  : undefined
+              }
+            />
+          </div>
+          {yearReview.topRated.length > 0 && (
+            <div className="mt-8">
+              <span className="label">Найкращі {CURRENT_YEAR}</span>
+              <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-3">
+                {yearReview.topRated.map((item) =>
+                  item.movie ? (
+                    <MovieCard
+                      key={item.tmdbId}
+                      movie={item.movie}
+                      rating={item.rating}
+                    />
+                  ) : null,
+                )}
+              </div>
+            </div>
+          )}
+        </section>
+      )}
 
       {data.topGenres.length > 0 && (
         <section className="mt-14">

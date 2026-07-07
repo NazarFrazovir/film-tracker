@@ -28,6 +28,20 @@ router.get("/", requireAuth, async (req: AuthedRequest, res) => {
   );
 });
 
+router.delete("/:id", requireAuth, async (req: AuthedRequest, res) => {
+  const userId = req.user!.userId;
+  const id = String(req.params.id);
+
+  const tag = await prisma.tag.findFirst({ where: { id, userId } });
+  if (!tag) {
+    res.status(404).json({ error: "Тег не знайдено" });
+    return;
+  }
+
+  await prisma.tag.delete({ where: { id } });
+  res.json({ success: true });
+});
+
 router.get("/:id/movies", requireAuth, async (req: AuthedRequest, res) => {
   const userId = req.user!.userId;
   const id = String(req.params.id);

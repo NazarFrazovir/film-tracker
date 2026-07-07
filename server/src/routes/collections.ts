@@ -79,20 +79,48 @@ router.get("/hero", requireAuth, async (req: AuthedRequest, res) => {
 
 router.get("/tonight", requireAuth, async (req: AuthedRequest, res) => {
   const userId = req.user!.userId;
+  const genre = String(req.query.genre ?? "").trim();
+  const maxRuntime = Number(req.query.maxRuntime ?? 0);
+  const preferOld = req.query.preferOld === "true";
 
   try {
-    const items = await prisma.watchlistItem.findMany({ where: { userId } });
+    const items = await prisma.watchlistItem.findMany({
+      where: { userId },
+      orderBy: { addedAt: preferOld ? "asc" : "desc" },
+    });
 
     if (items.length === 0) {
-      res.json({ movie: null });
+      res.json({ movie: null, poolSize: 0 });
       return;
     }
 
-    const pick = items[Math.floor(Math.random() * items.length)]!;
-    const movie = await getMovieCached(pick.tmdbId);
-    res.json({ movie, tmdbId: pick.tmdbId });
+    const movieMap = await getMoviesCached(items.map((i) => i.tmdbId));
+
+    let candidates = items.filter((item) => {
+      const movie = movieMap.get(item.tmdbId);
+      if (!movie) return false;
+      if (genre && !movie.genres?.some((g) => g.name === genre)) return false;
+      if (maxRuntime > 0 && movie.runtime != null && movie.runtime > maxRuntime) {
+        return false;
+      }
+      return true;
+    });
+
+    if (preferOld && candidates.length > 1) {
+      const half = Math.max(1, Math.ceil(candidates.length / 2));
+      candidates = candidates.slice(0, half);
+    }
+
+    if (candidates.length === 0) {
+      res.json({ movie: null, poolSize: 0 });
+      return;
+    }
+
+    const pick = candidates[Math.floor(Math.random() * candidates.length)]!;
+    const movie = movieMap.get(pick.tmdbId) ?? (await getMovieCached(pick.tmdbId));
+    res.json({ movie, tmdbId: pick.tmdbId, poolSize: candidates.length });
   } catch {
-    res.json({ movie: null });
+    res.json({ movie: null, poolSize: 0 });
   }
 });
 
