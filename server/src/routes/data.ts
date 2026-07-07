@@ -46,7 +46,7 @@ router.get("/export", requireAuth, async (req: AuthedRequest, res) => {
       tmdbId: w.tmdbId,
       rating: w.rating,
       notes: w.notes,
-      watchedAt: w.watchedAt.toISOString(),
+      watchedAt: w.watchedAt?.toISOString() ?? null,
     })),
     customLists: customLists.map((list) => ({
       name: list.name,
@@ -89,7 +89,7 @@ const importSchema = z.object({
         tmdbId: z.number().int(),
         rating: z.number().int().min(1).max(10).nullable().optional(),
         notes: z.string().max(500).nullable().optional(),
-        watchedAt: z.string().optional(),
+        watchedAt: z.string().nullable().optional(),
       }),
     )
     .optional(),
@@ -184,12 +184,14 @@ router.post("/import", requireAuth, async (req: AuthedRequest, res) => {
           tmdbId: item.tmdbId,
           rating: item.rating ?? null,
           notes: item.notes ?? null,
-          watchedAt: item.watchedAt ? new Date(item.watchedAt) : new Date(),
+          watchedAt: item.watchedAt ? new Date(item.watchedAt) : null,
         },
         update: {
           rating: item.rating ?? undefined,
           notes: item.notes ?? undefined,
-          ...(item.watchedAt ? { watchedAt: new Date(item.watchedAt) } : {}),
+          ...(item.watchedAt !== undefined
+            ? { watchedAt: item.watchedAt ? new Date(item.watchedAt) : null }
+            : {}),
         },
       });
       stats.watched++;

@@ -642,6 +642,13 @@ button.star-rating__star:hover {
   color: rgba(138, 130, 150, 0.8);
 }
 
+.watched-panel__hint {
+  margin: 0.35rem 0 0;
+  font-family: var(--font-ui);
+  font-size: 0.65rem;
+  color: rgba(138, 130, 150, 0.6);
+}
+
 .watched-panel__date {
   max-width: 100%;
   padding: 0.55rem 0.75rem;

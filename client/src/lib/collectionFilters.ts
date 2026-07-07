@@ -29,10 +29,17 @@ export function filterAndSortItems(
     result = result.filter((i) => i.movie!.vote_average >= minTmdbRating);
   }
 
+  function compareDate(a: string, b: string, asc: boolean): number {
+    if (!a && !b) return 0;
+    if (!a) return 1;
+    if (!b) return -1;
+    return asc ? a.localeCompare(b) : b.localeCompare(a);
+  }
+
   result.sort((a, b) => {
     switch (sort) {
       case "date-asc":
-        return a.date.localeCompare(b.date);
+        return compareDate(a.date, b.date, true);
       case "title":
         return a.movie!.title.localeCompare(b.movie!.title, "uk");
       case "tmdb-rating":
@@ -41,7 +48,7 @@ export function filterAndSortItems(
         return (b.rating ?? 0) - (a.rating ?? 0);
       case "date-desc":
       default:
-        return b.date.localeCompare(a.date);
+        return compareDate(a.date, b.date, false);
     }
   });
 

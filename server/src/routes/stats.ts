@@ -44,8 +44,10 @@ router.get("/", requireAuth, async (req: AuthedRequest, res) => {
         genreCounts.set(g.name, (genreCounts.get(g.name) ?? 0) + 1);
       }
 
-      const monthKey = item.watchedAt.toISOString().slice(0, 7);
-      monthlyCounts.set(monthKey, (monthlyCounts.get(monthKey) ?? 0) + 1);
+      if (item.watchedAt) {
+        const monthKey = item.watchedAt.toISOString().slice(0, 7);
+        monthlyCounts.set(monthKey, (monthlyCounts.get(monthKey) ?? 0) + 1);
+      }
     }
 
     const avgTmdbRating =

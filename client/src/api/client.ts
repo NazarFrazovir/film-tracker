@@ -131,9 +131,17 @@ export const api = {
       ),
     updateWatched: (
       tmdbId: number,
-      data: { rating?: number | null; notes?: string | null; watchedAt?: string },
+      data: {
+        rating?: number | null;
+        notes?: string | null;
+        watchedAt?: string | null;
+      },
     ) =>
-      request<{ rating: number | null; notes: string | null; watchedAt: string }>(
+      request<{
+        rating: number | null;
+        notes: string | null;
+        watchedAt: string | null;
+      }>(
         `/api/collections/watched/${tmdbId}`,
         { method: "PATCH", body: JSON.stringify(data) },
       ),

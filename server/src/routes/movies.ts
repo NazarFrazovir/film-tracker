@@ -137,7 +137,7 @@ router.get("/:tmdbId", optionalAuth, async (req: AuthedRequest, res) => {
         watched: !!watched,
         rating: watched?.rating ?? null,
         notes: watched?.notes ?? null,
-        watchedAt: watched?.watchedAt.toISOString() ?? null,
+        watchedAt: watched?.watchedAt?.toISOString() ?? null,
       };
 
       tags = movieTags.map((mt) => ({ id: mt.tag.id, name: mt.tag.name }));
@@ -168,7 +168,7 @@ router.get("/:tmdbId/status", requireAuth, async (req: AuthedRequest, res) => {
     watched: !!watched,
     rating: watched?.rating ?? null,
     notes: watched?.notes ?? null,
-    watchedAt: watched?.watchedAt.toISOString() ?? null,
+    watchedAt: watched?.watchedAt?.toISOString() ?? null,
   });
 });
 

@@ -14,13 +14,18 @@ function isCollectionType(value: string): value is CollectionType {
 }
 
 async function enrichItems(
-  items: { tmdbId: number; date: Date; rating?: number | null; notes?: string | null }[],
+  items: {
+    tmdbId: number;
+    date: Date | null;
+    rating?: number | null;
+    notes?: string | null;
+  }[],
 ) {
   const movieMap = await getMoviesCached(items.map((i) => i.tmdbId));
 
   return items.map((item) => ({
     tmdbId: item.tmdbId,
-    date: item.date.toISOString(),
+    date: item.date?.toISOString() ?? "",
     rating: item.rating ?? null,
     notes: item.notes ?? null,
     movie: movieMap.get(item.tmdbId) ?? null,
@@ -186,7 +191,7 @@ router.post("/:type/:tmdbId", requireAuth, async (req: AuthedRequest, res) => {
         await prisma.watchedItem.upsert({
           where: { userId_tmdbId: { userId, tmdbId } },
           create: { userId, tmdbId },
-          update: { watchedAt: new Date() },
+          update: {},
         });
         break;
     }
@@ -234,8 +239,10 @@ const watchedPatchSchema = z.object({
   rating: z.number().int().min(1).max(10).nullable().optional(),
   notes: z.string().max(500).nullable().optional(),
   watchedAt: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "Формат дати: YYYY-MM-DD")
+    .union([
+      z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Формат дати: YYYY-MM-DD"),
+      z.null(),
+    ])
     .optional(),
 });
 
@@ -265,7 +272,10 @@ router.patch("/watched/:tmdbId", requireAuth, async (req: AuthedRequest, res) =>
       ...(rating !== undefined ? { rating } : {}),
       ...(notes !== undefined ? { notes } : {}),
       ...(watchedAt !== undefined
-        ? { watchedAt: new Date(`${watchedAt}T12:00:00`) }
+        ? {
+            watchedAt:
+              watchedAt === null ? null : new Date(`${watchedAt}T12:00:00`),
+          }
         : {}),
     },
   });
@@ -273,7 +283,7 @@ router.patch("/watched/:tmdbId", requireAuth, async (req: AuthedRequest, res) =>
   res.json({
     rating: updated.rating,
     notes: updated.notes,
-    watchedAt: updated.watchedAt.toISOString(),
+    watchedAt: updated.watchedAt?.toISOString() ?? null,
   });
 });
 

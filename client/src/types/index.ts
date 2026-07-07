@@ -127,7 +127,7 @@ export interface ExportData {
     tmdbId: number;
     rating: number | null;
     notes: string | null;
-    watchedAt: string;
+    watchedAt: string | null;
   }[];
   customLists: {
     name: string;

@@ -19,7 +19,7 @@ const TOGGLES: { type: CollectionType; active: string; inactive: string }[] = [
 ];
 
 function toDateInput(iso: string | null): string {
-  if (!iso) return new Date().toISOString().slice(0, 10);
+  if (!iso) return "";
   return iso.slice(0, 10);
 }
 
@@ -62,8 +62,7 @@ export function MovieActions({ tmdbId, initial, isLoggedIn }: MovieActionsProps)
         return { removed: true as const };
       }
       await api.collections.add("watched", tmdbId);
-      const now = new Date().toISOString();
-      return { removed: false as const, watchedAt: now };
+      return { removed: false as const };
     },
     onSuccess: (result) => {
       if (result.removed) {
@@ -75,10 +74,11 @@ export function MovieActions({ tmdbId, initial, isLoggedIn }: MovieActionsProps)
           watchedAt: null,
         }));
         setRating(null);
+        setWatchedDate("");
         toast("Прибрано з переглянутих");
       } else {
-        setState((s) => ({ ...s, watched: true, watchedAt: result.watchedAt }));
-        setWatchedDate(toDateInput(result.watchedAt));
+        setState((s) => ({ ...s, watched: true, watchedAt: null }));
+        setWatchedDate("");
         toast("Позначено як переглянутий");
       }
       invalidate();
@@ -91,7 +91,7 @@ export function MovieActions({ tmdbId, initial, isLoggedIn }: MovieActionsProps)
       api.collections.updateWatched(tmdbId, {
         rating,
         notes: notes || null,
-        watchedAt: watchedDate || undefined,
+        watchedAt: watchedDate.trim() ? watchedDate : null,
       }),
     onSuccess: (data) => {
       setState((s) => ({
@@ -101,6 +101,7 @@ export function MovieActions({ tmdbId, initial, isLoggedIn }: MovieActionsProps)
         watchedAt: data.watchedAt,
       }));
       setRating(data.rating);
+      setWatchedDate(toDateInput(data.watchedAt));
       toast("Збережено");
       invalidate();
     },
@@ -155,13 +156,16 @@ export function MovieActions({ tmdbId, initial, isLoggedIn }: MovieActionsProps)
 
           <div className="watched-panel__grid">
             <div className="watched-panel__field">
-              <label className="watched-panel__label">Дата</label>
+              <label className="watched-panel__label">Дата (необов'язково)</label>
               <input
                 type="date"
                 value={watchedDate}
                 onChange={(e) => setWatchedDate(e.target.value)}
                 className="input-field watched-panel__date"
               />
+              <p className="watched-panel__hint">
+                Залиште порожнім, якщо не пам'ятаєте коли дивились
+              </p>
             </div>
 
             <div className="watched-panel__field watched-panel__field--wide">
