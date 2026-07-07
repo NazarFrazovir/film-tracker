@@ -71,12 +71,29 @@ export interface MovieTag {
   name: string;
 }
 
+export interface CustomListChild {
+  id: string;
+  name: string;
+  emoji: string | null;
+  itemCount: number;
+}
+
+export interface CustomListParent {
+  id: string;
+  name: string;
+  emoji: string | null;
+}
+
 export interface CustomListSummary {
   id: string;
   name: string;
   emoji: string | null;
   color: string | null;
+  parentId: string | null;
   itemCount: number;
+  childCount: number;
+  totalItemCount: number;
+  children: CustomListChild[];
   createdAt: string;
   updatedAt: string;
 }
@@ -86,6 +103,10 @@ export interface CustomListDetail {
   name: string;
   emoji: string | null;
   color: string | null;
+  parentId: string | null;
+  parent: CustomListParent | null;
+  children: CustomListChild[];
+  canHaveChildren: boolean;
   items: CollectionEntry[];
 }
 
@@ -112,6 +133,11 @@ export interface ExportData {
     emoji: string | null;
     color: string | null;
     items: number[];
+    children?: {
+      name: string;
+      emoji: string | null;
+      items: number[];
+    }[];
   }[];
   tags: { name: string; movies: number[] }[];
 }

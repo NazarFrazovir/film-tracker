@@ -2,6 +2,12 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
 
+function filmCount(n: number): string {
+  if (n === 1) return "1 фільм";
+  if (n >= 2 && n <= 4) return `${n} фільми`;
+  return `${n} фільмів`;
+}
+
 export function CustomListsPreview() {
   const { data: lists } = useQuery({
     queryKey: ["lists"],
@@ -47,7 +53,20 @@ export function CustomListsPreview() {
             <span className="list-card__emoji">{list.emoji ?? "📋"}</span>
             <div className="min-w-0">
               <h3 className="list-card__title">{list.name}</h3>
-              <p className="list-card__count">{list.itemCount} фільмів</p>
+              <p className="list-card__count">
+                {filmCount(list.totalItemCount)}
+                {list.childCount > 0 && (
+                  <span className="list-card__meta">
+                    {" "}
+                    · {list.childCount}{" "}
+                    {list.childCount === 1
+                      ? "підсписок"
+                      : list.childCount < 5
+                        ? "підсписки"
+                        : "підсписків"}
+                  </span>
+                )}
+              </p>
             </div>
           </Link>
         ))}

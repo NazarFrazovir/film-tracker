@@ -10,27 +10,55 @@ const listSchema = z.object({
   name: z.string().min(1).max(60),
   emoji: z.string().max(4).nullable().optional(),
   color: z.string().max(20).nullable().optional(),
+  parentId: z.string().nullable().optional(),
 });
+
+function mapChild(list: {
+  id: string;
+  name: string;
+  emoji: string | null;
+  _count: { items: number };
+}) {
+  return {
+    id: list.id,
+    name: list.name,
+    emoji: list.emoji,
+    itemCount: list._count.items,
+  };
+}
 
 router.get("/", requireAuth, async (req: AuthedRequest, res) => {
   const userId = req.user!.userId;
 
   const lists = await prisma.customList.findMany({
-    where: { userId },
+    where: { userId, parentId: null },
     orderBy: { updatedAt: "desc" },
-    include: { _count: { select: { items: true } } },
+    include: {
+      _count: { select: { items: true } },
+      children: {
+        orderBy: { name: "asc" },
+        include: { _count: { select: { items: true } } },
+      },
+    },
   });
 
   res.json(
-    lists.map((l) => ({
-      id: l.id,
-      name: l.name,
-      emoji: l.emoji,
-      color: l.color,
-      itemCount: l._count.items,
-      createdAt: l.createdAt.toISOString(),
-      updatedAt: l.updatedAt.toISOString(),
-    })),
+    lists.map((l) => {
+      const childItemCount = l.children.reduce((s, c) => s + c._count.items, 0);
+      return {
+        id: l.id,
+        name: l.name,
+        emoji: l.emoji,
+        color: l.color,
+        parentId: null,
+        itemCount: l._count.items,
+        childCount: l.children.length,
+        totalItemCount: l._count.items + childItemCount,
+        children: l.children.map(mapChild),
+        createdAt: l.createdAt.toISOString(),
+        updatedAt: l.updatedAt.toISOString(),
+      };
+    }),
   );
 });
 
@@ -43,16 +71,49 @@ router.post("/", requireAuth, async (req: AuthedRequest, res) => {
     return;
   }
 
+  const { parentId, ...data } = parsed.data;
+
+  if (parentId) {
+    const parent = await prisma.customList.findFirst({
+      where: { id: parentId, userId },
+    });
+    if (!parent) {
+      res.status(404).json({ error: "Батьківський список не знайдено" });
+      return;
+    }
+    if (parent.parentId) {
+      res.status(400).json({ error: "Підсписки можна створювати лише в основному списку" });
+      return;
+    }
+  }
+
   const list = await prisma.customList.create({
-    data: { userId, ...parsed.data, emoji: parsed.data.emoji ?? null, color: parsed.data.color ?? null },
+    data: {
+      userId,
+      parentId: parentId ?? null,
+      ...data,
+      emoji: data.emoji ?? null,
+      color: data.color ?? null,
+    },
   });
+
+  if (parentId) {
+    await prisma.customList.update({
+      where: { id: parentId },
+      data: { updatedAt: new Date() },
+    });
+  }
 
   res.status(201).json({
     id: list.id,
     name: list.name,
     emoji: list.emoji,
     color: list.color,
+    parentId: list.parentId,
     itemCount: 0,
+    childCount: 0,
+    totalItemCount: 0,
+    children: [],
     createdAt: list.createdAt.toISOString(),
     updatedAt: list.updatedAt.toISOString(),
   });
@@ -64,7 +125,14 @@ router.get("/:id", requireAuth, async (req: AuthedRequest, res) => {
 
   const list = await prisma.customList.findFirst({
     where: { id, userId },
-    include: { items: { orderBy: { position: "asc" } } },
+    include: {
+      parent: { select: { id: true, name: true, emoji: true } },
+      children: {
+        orderBy: { name: "asc" },
+        include: { _count: { select: { items: true } } },
+      },
+      items: { orderBy: { position: "asc" } },
+    },
   });
 
   if (!list) {
@@ -79,6 +147,10 @@ router.get("/:id", requireAuth, async (req: AuthedRequest, res) => {
     name: list.name,
     emoji: list.emoji,
     color: list.color,
+    parentId: list.parentId,
+    parent: list.parent,
+    children: list.children.map(mapChild),
+    canHaveChildren: list.parentId === null,
     items: list.items.map((item) => ({
       tmdbId: item.tmdbId,
       position: item.position,
@@ -91,7 +163,7 @@ router.get("/:id", requireAuth, async (req: AuthedRequest, res) => {
 router.patch("/:id", requireAuth, async (req: AuthedRequest, res) => {
   const userId = req.user!.userId;
   const id = String(req.params.id);
-  const parsed = listSchema.partial().safeParse(req.body);
+  const parsed = listSchema.partial().omit({ parentId: true }).safeParse(req.body);
 
   if (!parsed.success) {
     res.status(400).json({ error: "Невірні дані" });
@@ -128,6 +200,14 @@ router.delete("/:id", requireAuth, async (req: AuthedRequest, res) => {
   }
 
   await prisma.customList.delete({ where: { id } });
+
+  if (existing.parentId) {
+    await prisma.customList.update({
+      where: { id: existing.parentId },
+      data: { updatedAt: new Date() },
+    });
+  }
+
   res.json({ success: true });
 });
 
@@ -163,6 +243,12 @@ router.post("/:id/items/:tmdbId", requireAuth, async (req: AuthedRequest, res) =
   });
 
   await prisma.customList.update({ where: { id }, data: { updatedAt: new Date() } });
+  if (list.parentId) {
+    await prisma.customList.update({
+      where: { id: list.parentId },
+      data: { updatedAt: new Date() },
+    });
+  }
   warmCache(tmdbId);
 
   res.json({ success: true, added: true });

@@ -72,6 +72,9 @@ model CustomList {
   id        String           @id @default(cuid())
   userId    String
   user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parentId  String?
+  parent    CustomList?      @relation("ListTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children  CustomList[]     @relation("ListTree")
   name      String
   emoji     String?
   color     String?
@@ -80,6 +83,7 @@ model CustomList {
   items     CustomListItem[]
 
   @@index([userId])
+  @@index([parentId])
 }
 
 model CustomListItem {

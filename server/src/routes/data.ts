@@ -19,8 +19,16 @@ router.get("/export", requireAuth, async (req: AuthedRequest, res) => {
         select: { tmdbId: true, rating: true, notes: true, watchedAt: true },
       }),
       prisma.customList.findMany({
-        where: { userId },
-        include: { items: { orderBy: { position: "asc" }, select: { tmdbId: true } } },
+        where: { userId, parentId: null },
+        include: {
+          items: { orderBy: { position: "asc" }, select: { tmdbId: true } },
+          children: {
+            orderBy: { name: "asc" },
+            include: {
+              items: { orderBy: { position: "asc" }, select: { tmdbId: true } },
+            },
+          },
+        },
       }),
       prisma.tag.findMany({
         where: { userId },
@@ -29,7 +37,7 @@ router.get("/export", requireAuth, async (req: AuthedRequest, res) => {
     ]);
 
   const payload = {
-    version: 1,
+    version: 2,
     exportedAt: new Date().toISOString(),
     favorites: favorites.map((f) => f.tmdbId),
     legendary: legendary.map((l) => l.tmdbId),
@@ -45,6 +53,11 @@ router.get("/export", requireAuth, async (req: AuthedRequest, res) => {
       emoji: list.emoji,
       color: list.color,
       items: list.items.map((i) => i.tmdbId),
+      children: list.children.map((child) => ({
+        name: child.name,
+        emoji: child.emoji,
+        items: child.items.map((i) => i.tmdbId),
+      })),
     })),
     tags: tags.map((tag) => ({
       name: tag.name,
@@ -57,6 +70,12 @@ router.get("/export", requireAuth, async (req: AuthedRequest, res) => {
     `attachment; filename="film-tracker-export-${Date.now()}.json"`,
   );
   res.json(payload);
+});
+
+const childListSchema = z.object({
+  name: z.string().min(1).max(60),
+  emoji: z.string().max(4).nullable().optional(),
+  items: z.array(z.number().int()),
 });
 
 const importSchema = z.object({
@@ -81,6 +100,7 @@ const importSchema = z.object({
         emoji: z.string().max(4).nullable().optional(),
         color: z.string().max(20).nullable().optional(),
         items: z.array(z.number().int()),
+        children: z.array(childListSchema).optional(),
       }),
     )
     .optional(),
@@ -93,6 +113,18 @@ const importSchema = z.object({
     )
     .optional(),
 });
+
+async function importListItems(listId: string, tmdbIds: number[]) {
+  let pos = 0;
+  for (const tmdbId of tmdbIds) {
+    await prisma.customListItem.upsert({
+      where: { listId_tmdbId: { listId, tmdbId } },
+      create: { listId, tmdbId, position: pos++ },
+      update: {},
+    });
+    warmCache(tmdbId);
+  }
+}
 
 router.post("/import", requireAuth, async (req: AuthedRequest, res) => {
   const userId = req.user!.userId;
@@ -174,15 +206,19 @@ router.post("/import", requireAuth, async (req: AuthedRequest, res) => {
         },
       });
       stats.customLists++;
+      await importListItems(list.id, listData.items);
 
-      let pos = 0;
-      for (const tmdbId of listData.items) {
-        await prisma.customListItem.upsert({
-          where: { listId_tmdbId: { listId: list.id, tmdbId } },
-          create: { listId: list.id, tmdbId, position: pos++ },
-          update: {},
+      for (const childData of listData.children ?? []) {
+        const child = await prisma.customList.create({
+          data: {
+            userId,
+            parentId: list.id,
+            name: childData.name,
+            emoji: childData.emoji ?? null,
+          },
         });
-        warmCache(tmdbId);
+        stats.customLists++;
+        await importListItems(child.id, childData.items);
       }
     }
 

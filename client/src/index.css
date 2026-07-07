@@ -839,6 +839,121 @@ button.star-rating__star:hover {
   background: rgba(201, 162, 39, 0.12);
 }
 
+.list-card__meta {
+  color: rgba(201, 162, 39, 0.55);
+}
+
+.list-card__children {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+}
+
+.list-card__child-tag {
+  font-family: var(--font-ui);
+  font-size: 0.62rem;
+  color: var(--color-mist);
+  padding: 0.15rem 0.45rem;
+  border-radius: 0.35rem;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.03);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 8rem;
+}
+
+.sublist-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: 0.75rem;
+}
+
+.sublist-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.02);
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.sublist-card:hover {
+  border-color: rgba(201, 162, 39, 0.2);
+  background: rgba(26, 26, 38, 0.7);
+}
+
+.sublist-card__link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+  min-width: 0;
+  text-decoration: none;
+  color: inherit;
+}
+
+.sublist-card__emoji {
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.sublist-card__title {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 0.9rem;
+  color: var(--color-fog);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sublist-card__count {
+  margin: 0.1rem 0 0;
+  font-family: var(--font-ui);
+  font-size: 0.65rem;
+  color: var(--color-mist);
+}
+
+.sublist-card__delete {
+  position: absolute;
+  right: 0.5rem;
+  top: 0.5rem;
+  border: none;
+  background: none;
+  color: var(--color-mist);
+  font-size: 1rem;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s;
+}
+
+.sublist-card:hover .sublist-card__delete {
+  opacity: 1;
+}
+
+.sublist-card__delete:hover {
+  color: var(--color-blood);
+}
+
+.list-picker-group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.action-btn--nested {
+  margin-left: 0.25rem;
+  font-size: 0.78rem;
+  opacity: 0.9;
+  border-style: dashed;
+}
+
 .data-panel {
   padding: 1.5rem;
   border-radius: 0.85rem;

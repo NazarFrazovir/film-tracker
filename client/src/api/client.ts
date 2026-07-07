@@ -105,7 +105,12 @@ export const api = {
   lists: {
     all: () => request<CustomListSummary[]>("/api/lists"),
     get: (id: string) => request<CustomListDetail>(`/api/lists/${id}`),
-    create: (data: { name: string; emoji?: string; color?: string }) =>
+    create: (data: {
+      name: string;
+      emoji?: string;
+      color?: string;
+      parentId?: string | null;
+    }) =>
       request<CustomListSummary>("/api/lists", {
         method: "POST",
         body: JSON.stringify(data),

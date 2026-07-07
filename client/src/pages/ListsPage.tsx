@@ -7,6 +7,18 @@ import { toast } from "../components/Toast";
 
 const EMOJI_OPTIONS = ["🎬", "🍿", "🌧️", "👻", "💫", "🔥", "🎭", "📽️"];
 
+function filmCount(n: number): string {
+  if (n === 1) return "1 фільм";
+  if (n >= 2 && n <= 4) return `${n} фільми`;
+  return `${n} фільмів`;
+}
+
+function sublistCount(n: number): string {
+  if (n === 1) return "1 підсписок";
+  if (n >= 2 && n <= 4) return `${n} підсписки`;
+  return `${n} підсписків`;
+}
+
 export function ListsPage() {
   const queryClient = useQueryClient();
   const [name, setName] = useState("");
@@ -45,7 +57,8 @@ export function ListsPage() {
           <span className="label">Кастомні колекції</span>
           <h1 className="title-section mt-1">Мої списки</h1>
           <p className="meta-line mt-2">
-            Створюйте власні категорії — «Фільми дощу», «Топ трилери» тощо
+            Створюйте власні категорії — «Фільми дощу», «Топ трилери» тощо. У кожному
+            списку можна додати підсписки.
           </p>
         </div>
         <button
@@ -124,19 +137,29 @@ export function ListsPage() {
                 <div className="min-w-0 flex-1">
                   <h3 className="list-card__title">{list.name}</h3>
                   <p className="list-card__count">
-                    {list.itemCount}{" "}
-                    {list.itemCount === 1
-                      ? "фільм"
-                      : list.itemCount < 5
-                        ? "фільми"
-                        : "фільмів"}
+                    {filmCount(list.totalItemCount)}
+                    {list.childCount > 0 && (
+                      <span className="list-card__meta">
+                        {" "}
+                        · {sublistCount(list.childCount)}
+                      </span>
+                    )}
                   </p>
+                  {list.children.length > 0 && (
+                    <div className="list-card__children">
+                      {list.children.map((child) => (
+                        <span key={child.id} className="list-card__child-tag">
+                          {child.emoji ?? "📂"} {child.name}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </Link>
               <button
                 type="button"
                 onClick={() => {
-                  if (confirm(`Видалити список «${list.name}»?`)) {
+                  if (confirm(`Видалити список «${list.name}» і всі підсписки?`)) {
                     deleteMutation.mutate(list.id);
                   }
                 }}

@@ -45,6 +45,26 @@ export function CustomListPicker({
     onError: (err: Error) => toast(err.message),
   });
 
+  const renderButton = (
+    listId: string,
+    label: string,
+    nested = false,
+  ) => {
+    const isIn = activeIds.includes(listId);
+    return (
+      <button
+        key={listId}
+        type="button"
+        disabled={toggleMutation.isPending}
+        onClick={() => toggleMutation.mutate({ listId, isIn })}
+        className={`action-btn ${isIn ? "action-btn--active" : ""} ${nested ? "action-btn--nested" : ""}`}
+      >
+        {isIn ? "✓ " : "+ "}
+        {label}
+      </button>
+    );
+  };
+
   if (!isLoggedIn) return null;
 
   if (!lists?.length) {
@@ -66,19 +86,18 @@ export function CustomListPicker({
       <span className="label">Мої списки</span>
       <div className="mt-3 flex flex-wrap gap-2">
         {lists.map((list) => {
-          const isIn = activeIds.includes(list.id);
+          const rootLabel = `${list.emoji ? `${list.emoji} ` : ""}${list.name}`;
           return (
-            <button
-              key={list.id}
-              type="button"
-              disabled={toggleMutation.isPending}
-              onClick={() => toggleMutation.mutate({ listId: list.id, isIn })}
-              className={`action-btn ${isIn ? "action-btn--active" : ""}`}
-            >
-              {list.emoji ? `${list.emoji} ` : ""}
-              {isIn ? "✓ " : "+ "}
-              {list.name}
-            </button>
+            <span key={list.id} className="list-picker-group">
+              {renderButton(list.id, rootLabel)}
+              {list.children.map((child) =>
+                renderButton(
+                  child.id,
+                  `${child.emoji ? `${child.emoji} ` : "📂 "}${child.name}`,
+                  true,
+                ),
+              )}
+            </span>
           );
         })}
       </div>
