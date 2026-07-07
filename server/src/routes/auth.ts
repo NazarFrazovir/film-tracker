@@ -50,6 +50,7 @@ router.post("/register", async (req, res) => {
       email: user.email,
       name: user.name,
       onboardingCompleted: user.onboardingCompleted,
+      watchGoal: user.watchGoal,
     },
   });
 });
@@ -77,6 +78,7 @@ router.post("/login", async (req, res) => {
       email: user.email,
       name: user.name,
       onboardingCompleted: user.onboardingCompleted,
+      watchGoal: user.watchGoal,
     },
   });
 });
@@ -94,6 +96,7 @@ router.get("/me", requireAuth, async (req: AuthedRequest, res) => {
       email: true,
       name: true,
       onboardingCompleted: true,
+      watchGoal: true,
       createdAt: true,
     },
   });

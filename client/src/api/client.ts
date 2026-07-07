@@ -6,10 +6,13 @@ import type {
   CustomListDetail,
   CustomListSummary,
   DiaryDay,
+  DiscoverFilters,
   ExportData,
   MovieExtras,
   MovieTag,
+  PersonFilmCredit,
   TMDBMovie,
+  TMDBPerson,
   TagSummary,
   TonightFilters,
   User,
@@ -75,6 +78,11 @@ export const api = {
       request<{ user: User }>("/api/settings/onboarding/complete", {
         method: "POST",
       }),
+    updateWatchGoal: (watchGoal: number | null) =>
+      request<{ user: User }>("/api/settings/watch-goal", {
+        method: "PATCH",
+        body: JSON.stringify({ watchGoal }),
+      }),
   },
 
   movies: {
@@ -108,6 +116,42 @@ export const api = {
         method: "POST",
         body: JSON.stringify({ tmdbIds }),
       }),
+    genres: () =>
+      request<{ genres: { id: number; name: string }[] }>("/api/movies/genres"),
+    discover: (filters: DiscoverFilters = {}) => {
+      const params = new URLSearchParams();
+      if (filters.page) params.set("page", String(filters.page));
+      if (filters.genreId) params.set("genreId", String(filters.genreId));
+      if (filters.year) params.set("year", String(filters.year));
+      if (filters.minRating) params.set("minRating", String(filters.minRating));
+      if (filters.sortBy) params.set("sortBy", filters.sortBy);
+      if (filters.excludeOwned) params.set("excludeOwned", "true");
+      const qs = params.toString();
+      return request<{
+        results: TMDBMovie[];
+        total_pages: number;
+        total_results: number;
+        page: number;
+      }>(`/api/movies/discover${qs ? `?${qs}` : ""}`);
+    },
+    recommendations: () =>
+      request<{ results: TMDBMovie[]; basedOn: string | null }>(
+        "/api/movies/recommendations",
+      ),
+    person: (personId: number) =>
+      request<{
+        person: TMDBPerson;
+        filmography: PersonFilmCredit[];
+        statuses: Record<
+          number,
+          {
+            favorites: boolean;
+            legendary: boolean;
+            watchlist: boolean;
+            watched: boolean;
+          }
+        >;
+      }>(`/api/movies/person/${personId}`),
   },
 
   stats: {

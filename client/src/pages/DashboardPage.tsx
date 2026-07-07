@@ -5,6 +5,7 @@ import { api } from "../api/client";
 import { CollectionSection } from "../components/CollectionSection";
 import { CustomListsPreview } from "../components/CustomListsPreview";
 import { HeroBanner } from "../components/HeroBanner";
+import { RecommendationsPreview } from "../components/RecommendationsPreview";
 import { TonightModal } from "../components/TonightModal";
 import { useAuth } from "../context/AuthContext";
 
@@ -69,6 +70,8 @@ export function DashboardPage() {
           </div>
         </div>
       </div>
+
+      <RecommendationsPreview />
 
       <div className="mt-14 space-y-14">
         <CollectionSection type="favorites" count={summary?.favorites} />

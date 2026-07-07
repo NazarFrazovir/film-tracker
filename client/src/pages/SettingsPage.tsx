@@ -14,10 +14,14 @@ export function SettingsPage() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [deletePassword, setDeletePassword] = useState("");
+  const [watchGoal, setWatchGoal] = useState(
+    user?.watchGoal != null ? String(user.watchGoal) : "",
+  );
 
   useEffect(() => {
     setName(user?.name ?? "");
-  }, [user?.name]);
+    setWatchGoal(user?.watchGoal != null ? String(user.watchGoal) : "");
+  }, [user?.name, user?.watchGoal]);
 
   const profileMutation = useMutation({
     mutationFn: () => api.settings.updateProfile(name.trim() || null),
@@ -34,6 +38,18 @@ export function SettingsPage() {
       setCurrentPassword("");
       setNewPassword("");
       toast("Пароль змінено");
+    },
+    onError: (err: Error) => toast(err.message),
+  });
+
+  const watchGoalMutation = useMutation({
+    mutationFn: () => {
+      const val = watchGoal.trim();
+      return api.settings.updateWatchGoal(val ? Number(val) : null);
+    },
+    onSuccess: async () => {
+      await refresh();
+      toast("Ціль року оновлено");
     },
     onError: (err: Error) => toast(err.message),
   });
@@ -124,6 +140,42 @@ export function SettingsPage() {
             className="btn-primary rounded-lg px-5 py-2"
           >
             Оновити пароль
+          </button>
+        </form>
+      </section>
+
+      <section className="settings-section">
+        <h2 className="settings-section__title">Ціль року</h2>
+        <p className="meta-line mb-4">
+          Скільки фільмів плануєте подивитись цього року — прогрес з'явиться в статистиці
+        </p>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            const val = watchGoal.trim();
+            if (val && (Number(val) < 1 || Number(val) > 1000)) {
+              toast("Ціль має бути від 1 до 1000");
+              return;
+            }
+            watchGoalMutation.mutate();
+          }}
+        >
+          <label className="label mb-1 block">Фільмів на рік</label>
+          <input
+            type="number"
+            value={watchGoal}
+            onChange={(e) => setWatchGoal(e.target.value)}
+            className="input-field max-w-[200px]"
+            min={1}
+            max={1000}
+            placeholder="Наприклад: 52"
+          />
+          <button
+            type="submit"
+            disabled={watchGoalMutation.isPending}
+            className="btn-primary mt-4 rounded-lg px-5 py-2"
+          >
+            Зберегти
           </button>
         </form>
       </section>

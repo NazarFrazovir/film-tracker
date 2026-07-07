@@ -3,6 +3,7 @@ import { useAuth } from "../context/AuthContext";
 
 const NAV = [
   { to: "/", label: "Моя колекція" },
+  { to: "/discover", label: "Відкрити" },
   { to: "/search", label: "Пошук" },
   { to: "/stats", label: "Статистика" },
   { to: "/diary", label: "Щоденник" },
@@ -33,7 +34,8 @@ export function Header() {
                   location.pathname === item.to ||
                   (item.to === "/lists" && location.pathname.startsWith("/lists")) ||
                   (item.to === "/tags" && location.pathname.startsWith("/tags")) ||
-                  (item.to === "/diary" && location.pathname.startsWith("/diary"))
+                  (item.to === "/diary" && location.pathname.startsWith("/diary")) ||
+                  (item.to === "/discover" && location.pathname.startsWith("/discover"))
                     ? "bg-ember/10 text-ember-light"
                     : "text-mist hover:text-fog"
                 }`}

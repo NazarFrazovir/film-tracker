@@ -13,6 +13,8 @@ import { ListsPage } from "./pages/ListsPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { StatsPage } from "./pages/StatsPage";
 import { DiaryPage } from "./pages/DiaryPage";
+import { DiscoverPage } from "./pages/DiscoverPage";
+import { PersonPage } from "./pages/PersonPage";
 import { TagDetailPage } from "./pages/TagDetailPage";
 import { TagsPage } from "./pages/TagsPage";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
@@ -40,6 +42,14 @@ function AppShell() {
               element={
                 <ProtectedRoute>
                   <SearchPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/discover"
+              element={
+                <ProtectedRoute>
+                  <DiscoverPage />
                 </ProtectedRoute>
               }
             />
@@ -108,6 +118,7 @@ function AppShell() {
               }
             />
             <Route path="/movie/:id" element={<MoviePage />} />
+            <Route path="/person/:id" element={<PersonPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />

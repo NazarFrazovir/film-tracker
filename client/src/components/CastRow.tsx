@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { getImageUrl } from "../api/client";
 import type { TMDBCastMember } from "../types";
 
@@ -16,7 +17,11 @@ export function CastRow({ cast }: CastRowProps) {
         {cast.map((member) => {
           const photo = getImageUrl(member.profile_path, "w185");
           return (
-            <div key={member.id} className="w-24 shrink-0 text-center">
+            <Link
+              key={member.id}
+              to={`/person/${member.id}`}
+              className="w-24 shrink-0 text-center transition hover:opacity-80"
+            >
               <div className="mx-auto h-24 w-24 overflow-hidden rounded-full border border-white/10 bg-surface">
                 {photo ? (
                   <img
@@ -36,7 +41,7 @@ export function CastRow({ cast }: CastRowProps) {
               <p className="line-clamp-1 font-ui text-[10px] text-mist/60">
                 {member.character}
               </p>
-            </div>
+            </Link>
           );
         })}
       </div>

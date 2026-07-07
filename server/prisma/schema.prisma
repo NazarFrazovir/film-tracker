@@ -13,6 +13,7 @@ model User {
   name                String?
   passwordHash        String
   onboardingCompleted Boolean         @default(true)
+  watchGoal           Int?
   createdAt           DateTime        @default(now())
   favorites    Favorite[]
   legendary    Legendary[]

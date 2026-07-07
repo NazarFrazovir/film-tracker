@@ -134,6 +134,75 @@ export async function getMovieExtras(id: number) {
   };
 }
 
+export interface TMDBPerson {
+  id: number;
+  name: string;
+  biography: string;
+  birthday: string | null;
+  place_of_birth: string | null;
+  profile_path: string | null;
+  known_for_department: string;
+}
+
+export interface TMDBPersonMovieCredit {
+  id: number;
+  title: string;
+  poster_path: string | null;
+  release_date: string;
+  vote_average: number;
+  character?: string;
+  job?: string;
+}
+
+export interface DiscoverFilters {
+  page?: number;
+  genreId?: number;
+  year?: number;
+  minRating?: number;
+  sortBy?: string;
+}
+
+export const TMDB_GENRES: { id: number; name: string }[] = [
+  { id: 28, name: "Бойовик" },
+  { id: 12, name: "Пригоди" },
+  { id: 16, name: "Анімація" },
+  { id: 35, name: "Комедія" },
+  { id: 80, name: "Кримінал" },
+  { id: 99, name: "Документальний" },
+  { id: 18, name: "Драма" },
+  { id: 14, name: "Фентезі" },
+  { id: 27, name: "Жахи" },
+  { id: 10749, name: "Мелодрама" },
+  { id: 878, name: "Фантастика" },
+  { id: 53, name: "Трилер" },
+];
+
+export async function discoverMovies(filters: DiscoverFilters = {}) {
+  const params: Record<string, string> = {
+    page: String(filters.page ?? 1),
+    sort_by: filters.sortBy ?? "popularity.desc",
+    include_adult: "false",
+  };
+
+  if (filters.genreId) params.with_genres = String(filters.genreId);
+  if (filters.year) params.primary_release_year = String(filters.year);
+  if (filters.minRating && filters.minRating > 0) {
+    params["vote_average.gte"] = String(filters.minRating);
+  }
+
+  return tmdbFetch<TMDBPaginatedResponse<TMDBMovie>>("/discover/movie", params);
+}
+
+export async function getPersonDetails(id: number) {
+  return tmdbFetch<TMDBPerson>(`/person/${id}`);
+}
+
+export async function getPersonMovieCredits(id: number) {
+  return tmdbFetch<{ cast: TMDBPersonMovieCredit[]; crew: TMDBPersonMovieCredit[] }>(
+    `/person/${id}/movie_credits`,
+  );
+}
+
 export async function searchMovies(query: string, page = 1) {
   if (!query.trim()) {
     return { page: 1, results: [], total_pages: 0, total_results: 0 };

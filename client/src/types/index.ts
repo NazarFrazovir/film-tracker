@@ -3,6 +3,7 @@ export interface User {
   email: string;
   name: string | null;
   onboardingCompleted?: boolean;
+  watchGoal?: number | null;
   createdAt?: string;
 }
 
@@ -25,6 +26,40 @@ export interface TMDBCastMember {
   name: string;
   character: string;
   profile_path: string | null;
+}
+
+export interface TMDBPerson {
+  id: number;
+  name: string;
+  biography: string;
+  birthday: string | null;
+  place_of_birth: string | null;
+  profile_path: string | null;
+  known_for_department: string;
+}
+
+export interface PersonFilmCredit {
+  id: number;
+  title: string;
+  poster_path: string | null;
+  release_date: string;
+  vote_average: number;
+  character?: string;
+}
+
+export interface DiscoverFilters {
+  genreId?: number;
+  year?: number;
+  minRating?: number;
+  sortBy?: string;
+  excludeOwned?: boolean;
+  page?: number;
+}
+
+export interface ListTemplate {
+  name: string;
+  emoji: string;
+  color: string | null;
 }
 
 export interface MovieExtras {

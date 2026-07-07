@@ -1,11 +1,71 @@
 import { Router } from "express";
 import { z } from "zod";
-import { getMovieCached } from "../lib/movieCache.js";
-import { getMovieExtras, searchMovies } from "../lib/tmdb.js";
+import { getMovieCached, getMoviesCached } from "../lib/movieCache.js";
+import {
+  TMDB_GENRES,
+  discoverMovies,
+  getMovieExtras,
+  getPersonDetails,
+  getPersonMovieCredits,
+  searchMovies,
+} from "../lib/tmdb.js";
+import { getUserTmdbIds } from "../lib/userMovies.js";
 import { optionalAuth, requireAuth, type AuthedRequest } from "../middleware/auth.js";
 import { prisma } from "../lib/prisma.js";
 
 const router = Router();
+
+async function getCollectionStatuses(
+  userId: string,
+  tmdbIds: number[],
+): Promise<
+  Record<
+    number,
+    { favorites: boolean; legendary: boolean; watchlist: boolean; watched: boolean }
+  >
+> {
+  if (!tmdbIds.length) return {};
+
+  const [favorites, legendaries, watchlists, watcheds] = await Promise.all([
+    prisma.favorite.findMany({
+      where: { userId, tmdbId: { in: tmdbIds } },
+      select: { tmdbId: true },
+    }),
+    prisma.legendary.findMany({
+      where: { userId, tmdbId: { in: tmdbIds } },
+      select: { tmdbId: true },
+    }),
+    prisma.watchlistItem.findMany({
+      where: { userId, tmdbId: { in: tmdbIds } },
+      select: { tmdbId: true },
+    }),
+    prisma.watchedItem.findMany({
+      where: { userId, tmdbId: { in: tmdbIds } },
+      select: { tmdbId: true },
+    }),
+  ]);
+
+  const favSet = new Set(favorites.map((f) => f.tmdbId));
+  const legSet = new Set(legendaries.map((l) => l.tmdbId));
+  const watchSet = new Set(watchlists.map((w) => w.tmdbId));
+  const watchedSet = new Set(watcheds.map((w) => w.tmdbId));
+
+  const statuses: Record<
+    number,
+    { favorites: boolean; legendary: boolean; watchlist: boolean; watched: boolean }
+  > = {};
+
+  for (const tmdbId of tmdbIds) {
+    statuses[tmdbId] = {
+      favorites: favSet.has(tmdbId),
+      legendary: legSet.has(tmdbId),
+      watchlist: watchSet.has(tmdbId),
+      watched: watchedSet.has(tmdbId),
+    };
+  }
+
+  return statuses;
+}
 
 const batchStatusSchema = z.object({
   tmdbIds: z.array(z.number().int()).min(1).max(50),
@@ -72,6 +132,125 @@ router.get("/search", async (req, res) => {
     res.json(results);
   } catch {
     res.status(502).json({ error: "Не вдалося отримати дані TMDB" });
+  }
+});
+
+router.get("/genres", (_req, res) => {
+  res.json({ genres: TMDB_GENRES });
+});
+
+router.get("/discover", optionalAuth, async (req: AuthedRequest, res) => {
+  const page = Number(req.query.page ?? 1);
+  const genreId = req.query.genreId ? Number(req.query.genreId) : undefined;
+  const year = req.query.year ? Number(req.query.year) : undefined;
+  const minRating = req.query.minRating ? Number(req.query.minRating) : undefined;
+  const sortBy = req.query.sortBy ? String(req.query.sortBy) : undefined;
+  const excludeOwned = req.query.excludeOwned === "true";
+
+  try {
+    const result = await discoverMovies({
+      page: Number.isFinite(page) ? page : 1,
+      genreId: Number.isFinite(genreId!) ? genreId : undefined,
+      year: Number.isFinite(year!) ? year : undefined,
+      minRating: Number.isFinite(minRating!) ? minRating : undefined,
+      sortBy,
+    });
+
+    if (excludeOwned && req.user) {
+      const owned = await getUserTmdbIds(req.user.userId);
+      result.results = result.results.filter((m) => !owned.has(m.id));
+    }
+
+    res.json(result);
+  } catch {
+    res.status(502).json({ error: "Не вдалося отримати дані TMDB" });
+  }
+});
+
+router.get("/recommendations", requireAuth, async (req: AuthedRequest, res) => {
+  const userId = req.user!.userId;
+
+  try {
+    const [favorites, legendary] = await Promise.all([
+      prisma.favorite.findMany({ where: { userId }, select: { tmdbId: true } }),
+      prisma.legendary.findMany({ where: { userId }, select: { tmdbId: true } }),
+    ]);
+
+    const seedIds = [...favorites, ...legendary].map((r) => r.tmdbId);
+    const owned = await getUserTmdbIds(userId);
+
+    let basedOn: string | null = null;
+    let genreId: number | undefined;
+
+    if (seedIds.length > 0) {
+      const movieMap = await getMoviesCached(seedIds);
+      const genreCounts = new Map<number, number>();
+
+      for (const id of seedIds) {
+        const movie = movieMap.get(id);
+        if (!movie) continue;
+        for (const g of movie.genres ?? []) {
+          genreCounts.set(g.id, (genreCounts.get(g.id) ?? 0) + 1);
+        }
+      }
+
+      const topGenre = [...genreCounts.entries()].sort((a, b) => b[1] - a[1])[0];
+      if (topGenre) {
+        genreId = topGenre[0];
+        basedOn = TMDB_GENRES.find((g) => g.id === topGenre[0])?.name ?? null;
+      }
+    }
+
+    const discoverResult = await discoverMovies({
+      genreId,
+      sortBy: "vote_average.desc",
+      minRating: 7,
+      page: 1,
+    });
+
+    const results = discoverResult.results
+      .filter((m) => !owned.has(m.id))
+      .slice(0, 12);
+
+    res.json({ results, basedOn });
+  } catch {
+    res.status(502).json({ error: "Не вдалося отримати рекомендації" });
+  }
+});
+
+router.get("/person/:personId", optionalAuth, async (req: AuthedRequest, res) => {
+  const personId = Number(req.params.personId);
+  if (!Number.isFinite(personId)) {
+    res.status(400).json({ error: "Невірний ID" });
+    return;
+  }
+
+  try {
+    const [person, credits] = await Promise.all([
+      getPersonDetails(personId),
+      getPersonMovieCredits(personId),
+    ]);
+
+    const filmography = credits.cast
+      .filter((m) => m.poster_path && m.release_date)
+      .sort((a, b) => b.release_date.localeCompare(a.release_date))
+      .slice(0, 40);
+
+    let statuses: Record<
+      number,
+      { favorites: boolean; legendary: boolean; watchlist: boolean; watched: boolean }
+    > = {};
+
+    if (req.user) {
+      statuses = await getCollectionStatuses(
+        req.user.userId,
+        filmography.map((m) => m.id),
+      );
+    }
+
+    res.json({ person, filmography, statuses });
+  } catch {
+    res.status(404).json({ error: "Персону не знайдено" });
   }
 });
 

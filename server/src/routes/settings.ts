@@ -11,6 +11,10 @@ const profileSchema = z.object({
   name: z.string().max(50).nullable(),
 });
 
+const watchGoalSchema = z.object({
+  watchGoal: z.number().int().min(1).max(1000).nullable(),
+});
+
 const passwordSchema = z.object({
   currentPassword: z.string().min(1),
   newPassword: z.string().min(6, "Мінімум 6 символів"),
@@ -35,6 +39,30 @@ router.patch("/profile", requireAuth, async (req: AuthedRequest, res) => {
       email: true,
       name: true,
       onboardingCompleted: true,
+      watchGoal: true,
+      createdAt: true,
+    },
+  });
+
+  res.json({ user });
+});
+
+router.patch("/watch-goal", requireAuth, async (req: AuthedRequest, res) => {
+  const parsed = watchGoalSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Ціль має бути від 1 до 1000 фільмів" });
+    return;
+  }
+
+  const user = await prisma.user.update({
+    where: { id: req.user!.userId },
+    data: { watchGoal: parsed.data.watchGoal },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      onboardingCompleted: true,
+      watchGoal: true,
       createdAt: true,
     },
   });
@@ -103,6 +131,7 @@ router.post("/onboarding/complete", requireAuth, async (req: AuthedRequest, res)
       email: true,
       name: true,
       onboardingCompleted: true,
+      watchGoal: true,
       createdAt: true,
     },
   });

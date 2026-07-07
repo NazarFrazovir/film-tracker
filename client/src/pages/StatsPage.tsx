@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
 import { MovieCard } from "../components/MovieCard";
+import { useAuth } from "../context/AuthContext";
 
 const CURRENT_YEAR = new Date().getFullYear();
 
@@ -35,6 +36,7 @@ function formatMonth(month: string) {
 }
 
 export function StatsPage() {
+  const { user } = useAuth();
   const { data, isLoading } = useQuery({
     queryKey: ["stats"],
     queryFn: () => api.stats.get(),
@@ -119,6 +121,38 @@ export function StatsPage() {
           }
         />
       </div>
+
+      {user?.watchGoal && yearReview && (
+        <section className="mt-10 rounded-xl border border-white/8 bg-surface/40 p-6">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <span className="label">Ціль року</span>
+              <h2 className="title-section mt-1">
+                {yearReview.watchedCount} / {user.watchGoal} фільмів
+              </h2>
+            </div>
+            <Link
+              to="/settings"
+              className="font-ui text-[11px] uppercase tracking-wider text-ember hover:text-ember-light"
+            >
+              Змінити ціль →
+            </Link>
+          </div>
+          <div className="mt-4 h-3 overflow-hidden rounded-full bg-surface">
+            <div
+              className="h-full rounded-full bg-ember/70 transition-all"
+              style={{
+                width: `${Math.min(100, Math.round((yearReview.watchedCount / user.watchGoal) * 100))}%`,
+              }}
+            />
+          </div>
+          <p className="mt-2 font-ui text-[11px] text-mist/60">
+            {yearReview.watchedCount >= user.watchGoal
+              ? "Ціль досягнута!"
+              : `Залишилось ${user.watchGoal - yearReview.watchedCount}`}
+          </p>
+        </section>
+      )}
 
       {yearReview && yearReview.watchedCount > 0 && (
         <section className="mt-14 rounded-xl border border-ember/15 bg-ember/5 p-6 md:p-8">

@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { api } from "../api/client";
 import { ListFormFields } from "../components/ListFormFields";
 import { toast } from "../components/Toast";
-import { listCardStyle } from "../lib/listConstants";
+import { LIST_TEMPLATES, listCardStyle } from "../lib/listConstants";
 
 function filmCount(n: number): string {
   if (n === 1) return "1 фільм";
@@ -84,6 +84,25 @@ export function ListsPage() {
             if (name.trim()) createMutation.mutate();
           }}
         >
+          <div className="mb-4">
+            <span className="label mb-2 block">Шаблони</span>
+            <div className="flex flex-wrap gap-2">
+              {LIST_TEMPLATES.map((tpl) => (
+                <button
+                  key={tpl.name}
+                  type="button"
+                  onClick={() => {
+                    setName(tpl.name);
+                    setEmoji(tpl.emoji);
+                    setColor(tpl.color);
+                  }}
+                  className="rounded-lg border border-white/10 px-3 py-1.5 font-ui text-[11px] text-mist transition hover:border-ember/30 hover:text-fog"
+                >
+                  {tpl.emoji} {tpl.name}
+                </button>
+              ))}
+            </div>
+          </div>
           <ListFormFields
             name={name}
             emoji={emoji}

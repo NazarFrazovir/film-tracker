@@ -1,6 +1,16 @@
 import type { CSSProperties } from "react";
+import type { ListTemplate } from "../types";
 
 export const LIST_EMOJI_OPTIONS = ["🎬", "🍿", "🌧️", "👻", "💫", "🔥", "🎭", "📽️", "📂", "🎯"];
+
+export const LIST_TEMPLATES: ListTemplate[] = [
+  { name: "Фільми для дощу", emoji: "🌧️", color: "#2a4a6b" },
+  { name: "Вечір жахів", emoji: "👻", color: "#4a5568" },
+  { name: "Комедії на вечір", emoji: "🍿", color: "#c9a227" },
+  { name: "Романтика", emoji: "💫", color: "#8b3a5c" },
+  { name: "Класика", emoji: "🎭", color: "#6b4f8a" },
+  { name: "Бойовики", emoji: "🔥", color: "#8b2635" },
+];
 
 export const LIST_COLOR_OPTIONS: { label: string; value: string | null }[] = [
   { label: "Без кольору", value: null },
