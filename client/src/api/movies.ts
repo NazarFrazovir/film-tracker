@@ -47,21 +47,32 @@ export const moviesApi = {
   genres: () =>
     request<{ genres: { id: number; name: string }[] }>("/api/movies/genres"),
 
-  discover: (filters: DiscoverFilters = {}) => {
+  discover: async (filters: DiscoverFilters = {}) => {
     const params = new URLSearchParams();
-    if (filters.page) params.set("page", String(filters.page));
+    params.set("page", String(filters.page ?? 1));
     if (filters.genreId) params.set("genreId", String(filters.genreId));
     if (filters.year) params.set("year", String(filters.year));
     if (filters.minRating) params.set("minRating", String(filters.minRating));
     if (filters.sortBy) params.set("sortBy", filters.sortBy);
     if (filters.excludeOwned) params.set("excludeOwned", "true");
     const qs = params.toString();
-    return request<{
-      results: TMDBMovie[];
-      total_pages: number;
-      total_results: number;
-      page: number;
-    }>(`/api/movies/discover${qs ? `?${qs}` : ""}`);
+    const data = await request<{
+      results?: TMDBMovie[];
+      total_pages?: number;
+      total_results?: number;
+      page?: number;
+    }>(`/api/movies/discover?${qs}`);
+
+    if (!Array.isArray(data.results)) {
+      throw new Error("Сервер повернув некоректні дані — перезапустіть npm run dev");
+    }
+
+    return {
+      results: data.results,
+      total_pages: data.total_pages ?? 1,
+      total_results: data.total_results ?? data.results.length,
+      page: data.page ?? filters.page ?? 1,
+    };
   },
 
   recommendations: () =>

@@ -1,10 +1,10 @@
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
 import { api } from "../api/client";
 import { moviesApi } from "../api/movies";
 import { DiscoverFiltersBar } from "../components/DiscoverFiltersBar";
 import { SearchMovieCard } from "../components/SearchMovieCard";
-import type { DiscoverFilters } from "../types";
+import type { TMDBMovie } from "../types";
 
 export function DiscoverPage() {
   const [genreId, setGenreId] = useState<number | undefined>();
@@ -12,42 +12,44 @@ export function DiscoverPage() {
   const [minRating, setMinRating] = useState<number | undefined>();
   const [sortBy, setSortBy] = useState("popularity.desc");
   const [excludeOwned, setExcludeOwned] = useState(false);
+  const [page, setPage] = useState(1);
+  const [movies, setMovies] = useState<TMDBMovie[]>([]);
 
-  const {
-    data,
-    isPending,
-    isError,
-    error,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    refetch,
-  } = useInfiniteQuery({
-    queryKey: ["discover", genreId, year, minRating, sortBy, excludeOwned],
-    queryFn: ({ pageParam }) => {
-      const filters: DiscoverFilters = {
+  useEffect(() => {
+    setPage(1);
+    setMovies([]);
+  }, [genreId, year, minRating, sortBy, excludeOwned]);
+
+  const { data, isPending, isError, error, isFetching, refetch } = useQuery({
+    queryKey: ["discover", genreId, year, minRating, sortBy, excludeOwned, page],
+    queryFn: () =>
+      moviesApi.discover({
         genreId,
         year,
         minRating,
         sortBy,
         excludeOwned,
-        page: pageParam,
-      };
-      return moviesApi.discover(filters);
-    },
-    initialPageParam: 1,
-    getNextPageParam: (lastPage, allPages) => {
-      const currentPage = allPages.length;
-      return currentPage < lastPage.total_pages ? currentPage + 1 : undefined;
-    },
+        page,
+      }),
+    staleTime: 30_000,
   });
 
-  const results = useMemo(
-    () => data?.pages.flatMap((page) => page.results) ?? [],
-    [data],
-  );
+  useEffect(() => {
+    if (!data?.results) return;
 
-  const movieIds = useMemo(() => results.map((m) => m.id), [results]);
+    if (page === 1) {
+      setMovies(data.results);
+      return;
+    }
+
+    setMovies((prev) => {
+      const ids = new Set(prev.map((m) => m.id));
+      const next = data.results.filter((m) => !ids.has(m.id));
+      return [...prev, ...next];
+    });
+  }, [data, page]);
+
+  const movieIds = useMemo(() => movies.map((m) => m.id), [movies]);
 
   const { data: statuses } = useQuery({
     queryKey: ["discover-status", movieIds],
@@ -65,7 +67,10 @@ export function DiscoverPage() {
     staleTime: 30_000,
   });
 
-  const totalResults = data?.pages[0]?.total_results ?? 0;
+  const totalResults = data?.total_results ?? 0;
+  const hasNextPage = data ? page < data.total_pages : false;
+  const initialLoading = isPending && movies.length === 0;
+  const loadingMore = isFetching && !initialLoading;
 
   return (
     <div className="mx-auto max-w-7xl px-4 pb-20 pt-8 md:px-8 md:pt-12">
@@ -95,7 +100,7 @@ export function DiscoverPage() {
         }}
       />
 
-      {isPending ? (
+      {initialLoading ? (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
           {Array.from({ length: 10 }).map((_, i) => (
             <div key={i} className="aspect-[2/3] animate-pulse rounded-lg bg-surface" />
@@ -114,7 +119,7 @@ export function DiscoverPage() {
             Спробувати знову
           </button>
         </div>
-      ) : results.length === 0 ? (
+      ) : movies.length === 0 ? (
         <div className="text-center">
           <p className="meta-line italic">
             Нічого не знайдено — спробуйте інші фільтри
@@ -127,7 +132,7 @@ export function DiscoverPage() {
             {totalResults.toLocaleString("uk-UA")} результатів
           </p>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-            {results.map((movie) => (
+            {movies.map((movie) => (
               <SearchMovieCard
                 key={movie.id}
                 movie={movie}
@@ -139,11 +144,11 @@ export function DiscoverPage() {
             <div className="mt-10 text-center">
               <button
                 type="button"
-                onClick={() => fetchNextPage()}
-                disabled={isFetchingNextPage}
+                onClick={() => setPage((p) => p + 1)}
+                disabled={loadingMore}
                 className="btn-ghost rounded-lg border border-white/10 px-6 py-2.5 text-mist hover:text-fog"
               >
-                {isFetchingNextPage ? "Завантаження…" : "Ще фільми"}
+                {loadingMore ? "Завантаження…" : "Ще фільми"}
               </button>
             </div>
           )}
