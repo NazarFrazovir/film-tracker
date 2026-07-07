@@ -1,12 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
+import { moviesApi } from "../api/movies";
 import { SearchMovieCard } from "./SearchMovieCard";
 
 export function RecommendationsPreview() {
   const { data, isPending, isError } = useQuery({
     queryKey: ["recommendations"],
-    queryFn: () => api.movies.recommendations(),
+    queryFn: () => moviesApi.recommendations(),
     staleTime: 5 * 60_000,
     retry: 2,
   });

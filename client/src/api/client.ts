@@ -1,46 +1,21 @@
 import type {
   CollectionEntry,
-  CollectionState,
   CollectionSummary,
   CollectionType,
   CustomListDetail,
   CustomListSummary,
   DiaryDay,
-  DiscoverFilters,
   ExportData,
-  MovieExtras,
   MovieTag,
-  PersonFilmCredit,
-  TMDBMovie,
-  TMDBPerson,
   TagSummary,
+  TMDBMovie,
   TonightFilters,
   User,
   UserStats,
   YearReview,
 } from "../types";
-
-class ApiError extends Error {
-  constructor(public status: number, message: string) {
-    super(message);
-  }
-}
-
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(path, {
-    credentials: "include",
-    headers: { "Content-Type": "application/json", ...init?.headers },
-    ...init,
-  });
-
-  const data = await res.json().catch(() => ({}));
-
-  if (!res.ok) {
-    throw new ApiError(res.status, data.error ?? "Помилка запиту");
-  }
-
-  return data as T;
-}
+import { moviesApi } from "./movies";
+import { ApiError, request } from "./request";
 
 export const api = {
   auth: {
@@ -85,74 +60,7 @@ export const api = {
       }),
   },
 
-  movies: {
-    search: (q: string, page = 1) =>
-      request<{
-        results: TMDBMovie[];
-        total_pages: number;
-        total_results: number;
-      }>(`/api/movies/search?q=${encodeURIComponent(q)}&page=${page}`),
-    get: (tmdbId: number) =>
-      request<{
-        movie: TMDBMovie;
-        collections: CollectionState;
-        tags: MovieTag[];
-        customListIds: string[];
-      }>(`/api/movies/${tmdbId}`),
-    extras: (tmdbId: number) =>
-      request<MovieExtras>(`/api/movies/${tmdbId}/extras`),
-    statusBatch: (tmdbIds: number[]) =>
-      request<
-        Record<
-          number,
-          {
-            favorites: boolean;
-            legendary: boolean;
-            watchlist: boolean;
-            watched: boolean;
-          }
-        >
-      >("/api/movies/status/batch", {
-        method: "POST",
-        body: JSON.stringify({ tmdbIds }),
-      }),
-    genres: () =>
-      request<{ genres: { id: number; name: string }[] }>("/api/movies/genres"),
-    discover: (filters: DiscoverFilters = {}) => {
-      const params = new URLSearchParams();
-      if (filters.page) params.set("page", String(filters.page));
-      if (filters.genreId) params.set("genreId", String(filters.genreId));
-      if (filters.year) params.set("year", String(filters.year));
-      if (filters.minRating) params.set("minRating", String(filters.minRating));
-      if (filters.sortBy) params.set("sortBy", filters.sortBy);
-      if (filters.excludeOwned) params.set("excludeOwned", "true");
-      const qs = params.toString();
-      return request<{
-        results: TMDBMovie[];
-        total_pages: number;
-        total_results: number;
-        page: number;
-      }>(`/api/movies/discover${qs ? `?${qs}` : ""}`);
-    },
-    recommendations: () =>
-      request<{ results: TMDBMovie[]; basedOn: string | null }>(
-        "/api/movies/recommendations",
-      ),
-    person: (personId: number) =>
-      request<{
-        person: TMDBPerson;
-        filmography: PersonFilmCredit[];
-        statuses: Record<
-          number,
-          {
-            favorites: boolean;
-            legendary: boolean;
-            watchlist: boolean;
-            watched: boolean;
-          }
-        >;
-      }>(`/api/movies/person/${personId}`),
-  },
+  movies: moviesApi,
 
   stats: {
     get: () => request<UserStats>("/api/stats"),

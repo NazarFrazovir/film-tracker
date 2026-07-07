@@ -1,4 +1,4 @@
-const CACHE = "film-tracker-v1";
+const CACHE = "film-tracker-v2";
 const PRECACHE = ["/", "/index.html", "/manifest.webmanifest", "/icon.svg"];
 
 self.addEventListener("install", (event) => {

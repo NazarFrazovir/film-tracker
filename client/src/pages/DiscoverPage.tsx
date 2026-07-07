@@ -1,6 +1,7 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { api } from "../api/client";
+import { moviesApi } from "../api/movies";
 import { SearchMovieCard } from "../components/SearchMovieCard";
 import type { DiscoverFilters } from "../types";
 
@@ -40,7 +41,7 @@ export function DiscoverPage() {
         excludeOwned,
         page: pageParam,
       };
-      return api.movies.discover(filters);
+      return moviesApi.discover(filters);
     },
     initialPageParam: 1,
     getNextPageParam: (lastPage, allPages) => {

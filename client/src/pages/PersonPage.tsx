@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
-import { api, getImageUrl } from "../api/client";
+import { getImageUrl } from "../api/client";
+import { moviesApi } from "../api/movies";
 import { SearchMovieCard } from "../components/SearchMovieCard";
 
 export function PersonPage() {
@@ -9,7 +10,7 @@ export function PersonPage() {
 
   const { data, isPending, isError, error, refetch } = useQuery({
     queryKey: ["person", personId],
-    queryFn: () => api.movies.person(personId),
+    queryFn: () => moviesApi.person(personId),
     enabled: Number.isFinite(personId),
     retry: 2,
   });
