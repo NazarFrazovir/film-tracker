@@ -66,10 +66,11 @@ export function StatsPage() {
         Скільки переглянули, які жанри любите, як оцінюєте
       </p>
 
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
         <StatCard label="Переглянуто" value={data.watched} />
         <StatCard label="Улюблені" value={data.favorites} />
         <StatCard label="Легендарні" value={data.legendary} />
+        <StatCard label="Хочу подивитись" value={data.watchlist} />
         <StatCard
           label="Загальний час"
           value={data.totalRuntimeFormatted}

@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { api } from "../api/client";
 import type { CollectionState, CollectionType } from "../types";
 import { StarRating } from "./StarRating";
@@ -58,6 +59,14 @@ export function MovieActions({ tmdbId, initial, isLoggedIn }: MovieActionsProps)
     mutationFn: async () => {
       if (state.watched) {
         await api.collections.remove("watched", tmdbId);
+        return { removed: true as const };
+      }
+      await api.collections.add("watched", tmdbId);
+      const now = new Date().toISOString();
+      return { removed: false as const, watchedAt: now };
+    },
+    onSuccess: (result) => {
+      if (result.removed) {
         setState((s) => ({
           ...s,
           watched: false,
@@ -66,15 +75,12 @@ export function MovieActions({ tmdbId, initial, isLoggedIn }: MovieActionsProps)
           watchedAt: null,
         }));
         setRating(null);
-        return;
+        toast("Прибрано з переглянутих");
+      } else {
+        setState((s) => ({ ...s, watched: true, watchedAt: result.watchedAt }));
+        setWatchedDate(toDateInput(result.watchedAt));
+        toast("Позначено як переглянутий");
       }
-      await api.collections.add("watched", tmdbId);
-      const now = new Date().toISOString();
-      setState((s) => ({ ...s, watched: true, watchedAt: now }));
-      setWatchedDate(toDateInput(now));
-    },
-    onSuccess: () => {
-      toast(state.watched ? "Прибрано з переглянутих" : "Позначено як переглянутий");
       invalidate();
     },
     onError: (err: Error) => toast(err.message),
@@ -104,9 +110,9 @@ export function MovieActions({ tmdbId, initial, isLoggedIn }: MovieActionsProps)
   if (!isLoggedIn) {
     return (
       <p className="meta-line mt-6">
-        <a href="/login" className="text-ember hover:text-ember-light">
+        <Link to="/login" className="text-ember hover:text-ember-light">
           Увійдіть
-        </a>
+        </Link>
         , щоб додавати фільми до колекцій
       </p>
     );

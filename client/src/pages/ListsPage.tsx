@@ -3,9 +3,9 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
 import { ExportImportPanel } from "../components/ExportImportPanel";
+import { ListFormFields } from "../components/ListFormFields";
 import { toast } from "../components/Toast";
-
-const EMOJI_OPTIONS = ["🎬", "🍿", "🌧️", "👻", "💫", "🔥", "🎭", "📽️"];
+import { listCardStyle } from "../lib/listConstants";
 
 function filmCount(n: number): string {
   if (n === 1) return "1 фільм";
@@ -23,6 +23,7 @@ export function ListsPage() {
   const queryClient = useQueryClient();
   const [name, setName] = useState("");
   const [emoji, setEmoji] = useState("🎬");
+  const [color, setColor] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
 
   const { data: lists, isLoading } = useQuery({
@@ -31,9 +32,15 @@ export function ListsPage() {
   });
 
   const createMutation = useMutation({
-    mutationFn: () => api.lists.create({ name: name.trim(), emoji }),
+    mutationFn: () =>
+      api.lists.create({
+        name: name.trim(),
+        emoji,
+        color: color ?? undefined,
+      }),
     onSuccess: () => {
       setName("");
+      setColor(null);
       setShowForm(false);
       toast("Список створено");
       queryClient.invalidateQueries({ queryKey: ["lists"] });
@@ -78,26 +85,13 @@ export function ListsPage() {
             if (name.trim()) createMutation.mutate();
           }}
         >
-          <div className="list-form__emoji-row">
-            {EMOJI_OPTIONS.map((e) => (
-              <button
-                key={e}
-                type="button"
-                onClick={() => setEmoji(e)}
-                className={`list-form__emoji ${emoji === e ? "list-form__emoji--active" : ""}`}
-              >
-                {e}
-              </button>
-            ))}
-          </div>
-          <input
-            type="text"
-            value={name}
-            onChange={(ev) => setName(ev.target.value)}
-            placeholder="Назва списку..."
-            className="input-field mt-3"
-            maxLength={60}
-            autoFocus
+          <ListFormFields
+            name={name}
+            emoji={emoji}
+            color={color}
+            onNameChange={setName}
+            onEmojiChange={setEmoji}
+            onColorChange={setColor}
           />
           <div className="mt-4 flex gap-2">
             <button
@@ -131,7 +125,11 @@ export function ListsPage() {
       ) : (
         <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {lists.map((list) => (
-            <div key={list.id} className="list-card group">
+            <div
+              key={list.id}
+              className="list-card group"
+              style={listCardStyle(list.color)}
+            >
               <Link to={`/lists/${list.id}`} className="list-card__link">
                 <span className="list-card__emoji">{list.emoji ?? "📋"}</span>
                 <div className="min-w-0 flex-1">

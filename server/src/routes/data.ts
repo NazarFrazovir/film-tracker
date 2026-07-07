@@ -197,27 +197,54 @@ router.post("/import", requireAuth, async (req: AuthedRequest, res) => {
     }
 
     for (const listData of data.customLists ?? []) {
-      const list = await prisma.customList.create({
-        data: {
-          userId,
-          name: listData.name,
-          emoji: listData.emoji ?? null,
-          color: listData.color ?? null,
-        },
+      let list = await prisma.customList.findFirst({
+        where: { userId, name: listData.name, parentId: null },
       });
-      stats.customLists++;
-      await importListItems(list.id, listData.items);
 
-      for (const childData of listData.children ?? []) {
-        const child = await prisma.customList.create({
+      if (!list) {
+        list = await prisma.customList.create({
           data: {
             userId,
-            parentId: list.id,
-            name: childData.name,
-            emoji: childData.emoji ?? null,
+            name: listData.name,
+            emoji: listData.emoji ?? null,
+            color: listData.color ?? null,
           },
         });
         stats.customLists++;
+      } else {
+        list = await prisma.customList.update({
+          where: { id: list.id },
+          data: {
+            emoji: listData.emoji ?? list.emoji,
+            color: listData.color ?? list.color,
+          },
+        });
+      }
+
+      await importListItems(list.id, listData.items);
+
+      for (const childData of listData.children ?? []) {
+        let child = await prisma.customList.findFirst({
+          where: { userId, name: childData.name, parentId: list.id },
+        });
+
+        if (!child) {
+          child = await prisma.customList.create({
+            data: {
+              userId,
+              parentId: list.id,
+              name: childData.name,
+              emoji: childData.emoji ?? null,
+            },
+          });
+          stats.customLists++;
+        } else {
+          child = await prisma.customList.update({
+            where: { id: child.id },
+            data: { emoji: childData.emoji ?? child.emoji },
+          });
+        }
+
         await importListItems(child.id, childData.items);
       }
     }

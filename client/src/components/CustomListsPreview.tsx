@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
+import { listCardStyle } from "../lib/listConstants";
 
 function filmCount(n: number): string {
   if (n === 1) return "1 фільм";
@@ -49,6 +50,7 @@ export function CustomListsPreview() {
             key={list.id}
             to={`/lists/${list.id}`}
             className="list-card list-card--compact"
+            style={listCardStyle(list.color)}
           >
             <span className="list-card__emoji">{list.emoji ?? "📋"}</span>
             <div className="min-w-0">

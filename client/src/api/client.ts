@@ -68,6 +68,21 @@ export const api = {
       }>(`/api/movies/${tmdbId}`),
     extras: (tmdbId: number) =>
       request<MovieExtras>(`/api/movies/${tmdbId}/extras`),
+    statusBatch: (tmdbIds: number[]) =>
+      request<
+        Record<
+          number,
+          {
+            favorites: boolean;
+            legendary: boolean;
+            watchlist: boolean;
+            watched: boolean;
+          }
+        >
+      >("/api/movies/status/batch", {
+        method: "POST",
+        body: JSON.stringify({ tmdbIds }),
+      }),
   },
 
   stats: {
@@ -127,6 +142,11 @@ export const api = {
 
   tags: {
     all: () => request<TagSummary[]>("/api/tags"),
+    movies: (id: string) =>
+      request<{
+        tag: MovieTag;
+        movies: CollectionEntry[];
+      }>(`/api/tags/${id}/movies`),
     forMovie: (tmdbId: number) => request<MovieTag[]>(`/api/tags/movie/${tmdbId}`),
     setForMovie: (tmdbId: number, tags: string[]) =>
       request<{ tags: MovieTag[] }>(`/api/tags/movie/${tmdbId}`, {

@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, getImageUrl } from "../api/client";
 import type { CollectionType, TMDBMovie } from "../types";
@@ -25,16 +25,33 @@ const ACTION_TITLES: Record<CollectionType, string> = {
 
 interface SearchMovieCardProps {
   movie: TMDBMovie;
+  initialStatus?: {
+    favorites: boolean;
+    legendary: boolean;
+    watchlist: boolean;
+    watched: boolean;
+  };
 }
 
-export function SearchMovieCard({ movie }: SearchMovieCardProps) {
+export function SearchMovieCard({ movie, initialStatus }: SearchMovieCardProps) {
   const queryClient = useQueryClient();
   const [active, setActive] = useState<Record<CollectionType, boolean>>({
-    favorites: false,
-    legendary: false,
-    watchlist: false,
-    watched: false,
+    favorites: initialStatus?.favorites ?? false,
+    legendary: initialStatus?.legendary ?? false,
+    watchlist: initialStatus?.watchlist ?? false,
+    watched: initialStatus?.watched ?? false,
   });
+
+  useEffect(() => {
+    if (initialStatus) {
+      setActive({
+        favorites: initialStatus.favorites,
+        legendary: initialStatus.legendary,
+        watchlist: initialStatus.watchlist,
+        watched: initialStatus.watched,
+      });
+    }
+  }, [initialStatus]);
 
   const poster = getImageUrl(movie.poster_path, "w342");
   const year = movie.release_date?.slice(0, 4);
@@ -54,6 +71,7 @@ export function SearchMovieCard({ movie }: SearchMovieCardProps) {
       queryClient.invalidateQueries({ queryKey: ["collection"] });
       queryClient.invalidateQueries({ queryKey: ["summary"] });
       queryClient.invalidateQueries({ queryKey: ["hero"] });
+      queryClient.invalidateQueries({ queryKey: ["search-status"] });
     },
     onError: (err: Error) => toast(err.message),
   });

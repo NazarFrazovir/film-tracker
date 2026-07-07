@@ -10,6 +10,8 @@ import { SearchPage } from "./pages/SearchPage";
 import { ListDetailPage } from "./pages/ListDetailPage";
 import { ListsPage } from "./pages/ListsPage";
 import { StatsPage } from "./pages/StatsPage";
+import { TagDetailPage } from "./pages/TagDetailPage";
+import { TagsPage } from "./pages/TagsPage";
 
 export default function App() {
   return (
@@ -56,6 +58,22 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <ListDetailPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/tags"
+              element={
+                <ProtectedRoute>
+                  <TagsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/tags/:id"
+              element={
+                <ProtectedRoute>
+                  <TagDetailPage />
                 </ProtectedRoute>
               }
             />

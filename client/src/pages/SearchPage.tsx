@@ -1,5 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
 import { api } from "../api/client";
 import { SearchMovieCard } from "../components/SearchMovieCard";
 
@@ -12,14 +12,49 @@ export function SearchPage() {
     return () => clearTimeout(timer);
   }, [query]);
 
-  const { data, isLoading, isFetching } = useQuery({
+  const {
+    data,
+    isLoading,
+    isFetching,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
     queryKey: ["search", debounced],
-    queryFn: () => api.movies.search(debounced),
+    queryFn: ({ pageParam }) => api.movies.search(debounced, pageParam),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, allPages) => {
+      const currentPage = allPages.length;
+      return currentPage < lastPage.total_pages ? currentPage + 1 : undefined;
+    },
     enabled: debounced.length >= 2,
   });
 
-  const results = data?.results ?? [];
-  const searching = isLoading || isFetching;
+  const results = useMemo(
+    () => data?.pages.flatMap((page) => page.results) ?? [],
+    [data],
+  );
+
+  const movieIds = useMemo(() => results.map((m) => m.id), [results]);
+
+  const { data: statuses } = useQuery({
+    queryKey: ["search-status", movieIds],
+    queryFn: async () => {
+      const chunks: number[][] = [];
+      for (let i = 0; i < movieIds.length; i += 50) {
+        chunks.push(movieIds.slice(i, i + 50));
+      }
+      const parts = await Promise.all(
+        chunks.map((chunk) => api.movies.statusBatch(chunk)),
+      );
+      return Object.assign({}, ...parts);
+    },
+    enabled: movieIds.length > 0,
+    staleTime: 30_000,
+  });
+
+  const searching = isLoading || (isFetching && !isFetchingNextPage);
+  const totalResults = data?.pages[0]?.total_results ?? results.length;
 
   return (
     <div className="mx-auto max-w-7xl px-4 pb-20 pt-8 md:px-8 md:pt-12">
@@ -55,13 +90,29 @@ export function SearchPage() {
         ) : (
           <>
             <p className="meta-line mb-6">
-              Знайдено: {data?.total_results ?? results.length}
+              Знайдено: {totalResults} · показано {results.length}
             </p>
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
               {results.map((movie) => (
-                <SearchMovieCard key={movie.id} movie={movie} />
+                <SearchMovieCard
+                  key={movie.id}
+                  movie={movie}
+                  initialStatus={statuses?.[movie.id]}
+                />
               ))}
             </div>
+            {hasNextPage && (
+              <div className="mt-10 text-center">
+                <button
+                  type="button"
+                  onClick={() => fetchNextPage()}
+                  disabled={isFetchingNextPage}
+                  className="btn-ghost rounded-lg border border-white/10 px-6 py-2.5 text-mist"
+                >
+                  {isFetchingNextPage ? "Завантаження..." : "Завантажити ще"}
+                </button>
+              </div>
+            )}
           </>
         )}
       </div>

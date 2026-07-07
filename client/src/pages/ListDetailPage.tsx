@@ -1,11 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../api/client";
+import { ListFormFields } from "../components/ListFormFields";
 import { MovieCard } from "../components/MovieCard";
 import { toast } from "../components/Toast";
-
-const EMOJI_OPTIONS = ["🎬", "🍿", "🌧️", "👻", "💫", "🔥", "🎭", "📽️", "📂", "🎯"];
+import { listCardStyle } from "../lib/listConstants";
 
 function filmCount(n: number): string {
   if (n === 1) return "1 фільм";
@@ -19,12 +19,25 @@ export function ListDetailPage() {
   const [showSubForm, setShowSubForm] = useState(false);
   const [subName, setSubName] = useState("");
   const [subEmoji, setSubEmoji] = useState("📂");
+  const [subColor, setSubColor] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editEmoji, setEditEmoji] = useState("📋");
+  const [editColor, setEditColor] = useState<string | null>(null);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["list", id],
     queryFn: () => api.lists.get(id!),
     enabled: !!id,
   });
+
+  useEffect(() => {
+    if (data && !editing) {
+      setEditName(data.name);
+      setEditEmoji(data.emoji ?? "📋");
+      setEditColor(data.color);
+    }
+  }, [data, editing]);
 
   const removeMutation = useMutation({
     mutationFn: (tmdbId: number) => api.lists.removeItem(id!, tmdbId),
@@ -36,11 +49,33 @@ export function ListDetailPage() {
     onError: (err: Error) => toast(err.message),
   });
 
+  const updateMutation = useMutation({
+    mutationFn: () =>
+      api.lists.update(id!, {
+        name: editName.trim(),
+        emoji: editEmoji,
+        color: editColor,
+      }),
+    onSuccess: () => {
+      setEditing(false);
+      toast("Список оновлено");
+      queryClient.invalidateQueries({ queryKey: ["list", id] });
+      queryClient.invalidateQueries({ queryKey: ["lists"] });
+    },
+    onError: (err: Error) => toast(err.message),
+  });
+
   const createSubMutation = useMutation({
     mutationFn: () =>
-      api.lists.create({ name: subName.trim(), emoji: subEmoji, parentId: id! }),
+      api.lists.create({
+        name: subName.trim(),
+        emoji: subEmoji,
+        color: subColor ?? undefined,
+        parentId: id!,
+      }),
     onSuccess: () => {
       setSubName("");
+      setSubColor(null);
       setShowSubForm(false);
       toast("Підсписок створено");
       queryClient.invalidateQueries({ queryKey: ["list", id] });
@@ -90,16 +125,64 @@ export function ListDetailPage() {
         {backLabel}
       </Link>
 
-      <div className="mt-6 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <span className="text-3xl">{data.emoji ?? "📋"}</span>
-          <h1 className="title-section mt-2">{data.name}</h1>
-          <p className="meta-line mt-1">{filmCount(items.length)}</p>
+      {editing ? (
+        <form
+          className="list-form mt-6 max-w-md"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (editName.trim()) updateMutation.mutate();
+          }}
+        >
+          <span className="label">Редагування</span>
+          <ListFormFields
+            name={editName}
+            emoji={editEmoji}
+            color={editColor}
+            onNameChange={setEditName}
+            onEmojiChange={setEditEmoji}
+            onColorChange={setEditColor}
+          />
+          <div className="mt-4 flex gap-2">
+            <button
+              type="submit"
+              disabled={!editName.trim() || updateMutation.isPending}
+              className="btn-primary rounded-lg px-4 py-2"
+            >
+              Зберегти
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditing(false)}
+              className="btn-ghost rounded-lg border border-white/10 px-4 py-2 text-mist"
+            >
+              Скасувати
+            </button>
+          </div>
+        </form>
+      ) : (
+        <div
+          className="mt-6 flex flex-wrap items-end justify-between gap-4"
+          style={listCardStyle(data.color)}
+        >
+          <div className="min-w-0 pl-1">
+            <span className="text-3xl">{data.emoji ?? "📋"}</span>
+            <h1 className="title-section mt-2">{data.name}</h1>
+            <p className="meta-line mt-1">{filmCount(items.length)}</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              className="btn-ghost rounded-lg border border-white/10 px-4 py-2 text-mist"
+            >
+              Редагувати
+            </button>
+            <Link to="/search" className="btn-primary rounded-lg px-5 py-2.5">
+              + Додати фільм
+            </Link>
+          </div>
         </div>
-        <Link to="/search" className="btn-primary rounded-lg px-5 py-2.5">
-          + Додати фільм
-        </Link>
-      </div>
+      )}
 
       {data.canHaveChildren && (
         <section className="mt-10">
@@ -128,26 +211,14 @@ export function ListDetailPage() {
                 if (subName.trim()) createSubMutation.mutate();
               }}
             >
-              <div className="list-form__emoji-row">
-                {EMOJI_OPTIONS.map((e) => (
-                  <button
-                    key={e}
-                    type="button"
-                    onClick={() => setSubEmoji(e)}
-                    className={`list-form__emoji ${subEmoji === e ? "list-form__emoji--active" : ""}`}
-                  >
-                    {e}
-                  </button>
-                ))}
-              </div>
-              <input
-                type="text"
-                value={subName}
-                onChange={(ev) => setSubName(ev.target.value)}
-                placeholder="Назва підсписку..."
-                className="input-field mt-3"
-                maxLength={60}
-                autoFocus
+              <ListFormFields
+                name={subName}
+                emoji={subEmoji}
+                color={subColor}
+                onNameChange={setSubName}
+                onEmojiChange={setSubEmoji}
+                onColorChange={setSubColor}
+                namePlaceholder="Назва підсписку..."
               />
               <div className="mt-4 flex gap-2">
                 <button

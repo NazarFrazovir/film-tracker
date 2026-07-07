@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
+import { getMoviesCached } from "../lib/movieCache.js";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth, type AuthedRequest } from "../middleware/auth.js";
 
@@ -25,6 +26,33 @@ router.get("/", requireAuth, async (req: AuthedRequest, res) => {
       movieCount: t._count.movies,
     })),
   );
+});
+
+router.get("/:id/movies", requireAuth, async (req: AuthedRequest, res) => {
+  const userId = req.user!.userId;
+  const id = String(req.params.id);
+
+  const tag = await prisma.tag.findFirst({ where: { id, userId } });
+  if (!tag) {
+    res.status(404).json({ error: "Тег не знайдено" });
+    return;
+  }
+
+  const movieTags = await prisma.movieTag.findMany({
+    where: { userId, tagId: id },
+    orderBy: { addedAt: "desc" },
+  });
+
+  const movieMap = await getMoviesCached(movieTags.map((mt) => mt.tmdbId));
+
+  res.json({
+    tag: { id: tag.id, name: tag.name },
+    movies: movieTags.map((mt) => ({
+      tmdbId: mt.tmdbId,
+      date: mt.addedAt.toISOString(),
+      movie: movieMap.get(mt.tmdbId) ?? null,
+    })),
+  });
 });
 
 router.get("/movie/:tmdbId", requireAuth, async (req: AuthedRequest, res) => {
