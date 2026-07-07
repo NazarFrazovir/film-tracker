@@ -7,10 +7,11 @@ export function PersonPage() {
   const { id } = useParams<{ id: string }>();
   const personId = Number(id);
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isPending, isError, error, refetch } = useQuery({
     queryKey: ["person", personId],
     queryFn: () => api.movies.person(personId),
     enabled: Number.isFinite(personId),
+    retry: 2,
   });
 
   if (!Number.isFinite(personId)) {
@@ -21,7 +22,7 @@ export function PersonPage() {
     );
   }
 
-  if (isLoading) {
+  if (isPending) {
     return (
       <div className="mx-auto max-w-7xl px-4 py-24 md:px-8">
         <div className="flex gap-8">
@@ -35,13 +36,24 @@ export function PersonPage() {
     );
   }
 
-  if (error || !data) {
+  if (isError || !data) {
     return (
       <div className="mx-auto max-w-7xl px-4 py-24 text-center">
-        <p className="meta-line">Персону не знайдено</p>
-        <Link to="/search" className="btn-primary mt-4 inline-block rounded-lg px-5 py-2.5">
-          До пошуку
-        </Link>
+        <p className="meta-line">
+          {(error as Error)?.message ?? "Не вдалося завантажити дані акторів"}
+        </p>
+        <div className="mt-4 flex justify-center gap-3">
+          <button
+            type="button"
+            onClick={() => refetch()}
+            className="btn-primary rounded-lg px-5 py-2.5"
+          >
+            Спробувати знову
+          </button>
+          <Link to="/search" className="btn-ghost rounded-lg border border-white/10 px-5 py-2.5 text-mist">
+            До пошуку
+          </Link>
+        </div>
       </div>
     );
   }

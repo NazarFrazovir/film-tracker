@@ -140,7 +140,7 @@ router.get("/genres", (_req, res) => {
 });
 
 router.get("/discover", optionalAuth, async (req: AuthedRequest, res) => {
-  const page = Number(req.query.page ?? 1);
+  const page = Math.max(1, Number(req.query.page ?? 1));
   const genreId = req.query.genreId ? Number(req.query.genreId) : undefined;
   const year = req.query.year ? Number(req.query.year) : undefined;
   const minRating = req.query.minRating ? Number(req.query.minRating) : undefined;
@@ -148,21 +148,55 @@ router.get("/discover", optionalAuth, async (req: AuthedRequest, res) => {
   const excludeOwned = req.query.excludeOwned === "true";
 
   try {
-    const result = await discoverMovies({
-      page: Number.isFinite(page) ? page : 1,
-      genreId: Number.isFinite(genreId!) ? genreId : undefined,
-      year: Number.isFinite(year!) ? year : undefined,
-      minRating: Number.isFinite(minRating!) ? minRating : undefined,
-      sortBy,
-    });
+    const owned =
+      excludeOwned && req.user ? await getUserTmdbIds(req.user.userId) : null;
 
-    if (excludeOwned && req.user) {
-      const owned = await getUserTmdbIds(req.user.userId);
-      result.results = result.results.filter((m) => !owned.has(m.id));
+    if (!owned) {
+      const result = await discoverMovies({
+        page: Number.isFinite(page) ? page : 1,
+        genreId: Number.isFinite(genreId!) ? genreId : undefined,
+        year: Number.isFinite(year!) ? year : undefined,
+        minRating: Number.isFinite(minRating!) ? minRating : undefined,
+        sortBy,
+      });
+      res.json(result);
+      return;
     }
 
-    res.json(result);
-  } catch {
+    const targetSize = 20;
+    let currentPage = Number.isFinite(page) ? page : 1;
+    let totalPages = 1;
+    let totalResults = 0;
+    const collected: Awaited<ReturnType<typeof discoverMovies>>["results"] = [];
+
+    while (collected.length < targetSize && currentPage <= totalPages && currentPage <= page + 4) {
+      const result = await discoverMovies({
+        page: currentPage,
+        genreId: Number.isFinite(genreId!) ? genreId : undefined,
+        year: Number.isFinite(year!) ? year : undefined,
+        minRating: Number.isFinite(minRating!) ? minRating : undefined,
+        sortBy,
+      });
+
+      totalPages = result.total_pages;
+      totalResults = result.total_results;
+
+      for (const movie of result.results) {
+        if (!owned.has(movie.id)) collected.push(movie);
+        if (collected.length >= targetSize) break;
+      }
+
+      currentPage++;
+    }
+
+    res.json({
+      page,
+      results: collected,
+      total_pages: totalPages,
+      total_results: totalResults,
+    });
+  } catch (err) {
+    console.error("discover failed:", err);
     res.status(502).json({ error: "Не вдалося отримати дані TMDB" });
   }
 });
@@ -231,7 +265,7 @@ router.get("/person/:personId", optionalAuth, async (req: AuthedRequest, res) =>
       getPersonMovieCredits(personId),
     ]);
 
-    const filmography = credits.cast
+    const filmography = (credits.cast ?? [])
       .filter((m) => m.poster_path && m.release_date)
       .sort((a, b) => b.release_date.localeCompare(a.release_date))
       .slice(0, 40);
@@ -249,8 +283,9 @@ router.get("/person/:personId", optionalAuth, async (req: AuthedRequest, res) =>
     }
 
     res.json({ person, filmography, statuses });
-  } catch {
-    res.status(404).json({ error: "Персону не знайдено" });
+  } catch (err) {
+    console.error("person failed:", personId, err);
+    res.status(502).json({ error: "Не вдалося завантажити дані акторів" });
   }
 });
 

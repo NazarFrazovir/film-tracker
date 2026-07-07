@@ -190,6 +190,10 @@ export async function discoverMovies(filters: DiscoverFilters = {}) {
     params["vote_average.gte"] = String(filters.minRating);
   }
 
+  if ((filters.sortBy ?? params.sort_by) === "vote_average.desc") {
+    params["vote_count.gte"] = "100";
+  }
+
   return tmdbFetch<TMDBPaginatedResponse<TMDBMovie>>("/discover/movie", params);
 }
 

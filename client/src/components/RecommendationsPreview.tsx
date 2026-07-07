@@ -4,13 +4,14 @@ import { api } from "../api/client";
 import { SearchMovieCard } from "./SearchMovieCard";
 
 export function RecommendationsPreview() {
-  const { data, isLoading } = useQuery({
+  const { data, isPending, isError } = useQuery({
     queryKey: ["recommendations"],
     queryFn: () => api.movies.recommendations(),
     staleTime: 5 * 60_000,
+    retry: 2,
   });
 
-  if (isLoading) {
+  if (isPending) {
     return (
       <section className="mt-14">
         <div className="h-6 w-48 animate-pulse rounded bg-surface" />
@@ -23,7 +24,7 @@ export function RecommendationsPreview() {
     );
   }
 
-  if (!data?.results.length) return null;
+  if (isError || !data?.results.length) return null;
 
   const movieIds = data.results.map((m) => m.id);
 

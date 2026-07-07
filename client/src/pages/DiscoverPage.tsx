@@ -18,33 +18,30 @@ export function DiscoverPage() {
   const [year, setYear] = useState<number | undefined>();
   const [minRating, setMinRating] = useState<number | undefined>();
   const [sortBy, setSortBy] = useState("popularity.desc");
-  const [excludeOwned, setExcludeOwned] = useState(true);
-
-  const filters: DiscoverFilters = {
-    genreId,
-    year,
-    minRating,
-    sortBy,
-    excludeOwned,
-  };
-
-  const { data: genresData } = useQuery({
-    queryKey: ["genres"],
-    queryFn: () => api.movies.genres(),
-    staleTime: Infinity,
-  });
+  const [excludeOwned, setExcludeOwned] = useState(false);
 
   const {
     data,
-    isLoading,
-    isFetching,
+    isPending,
+    isError,
+    error,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
+    refetch,
   } = useInfiniteQuery({
-    queryKey: ["discover", filters],
-    queryFn: ({ pageParam }) =>
-      api.movies.discover({ ...filters, page: pageParam }),
+    queryKey: ["discover", genreId, year, minRating, sortBy, excludeOwned],
+    queryFn: ({ pageParam }) => {
+      const filters: DiscoverFilters = {
+        genreId,
+        year,
+        minRating,
+        sortBy,
+        excludeOwned,
+        page: pageParam,
+      };
+      return api.movies.discover(filters);
+    },
     initialPageParam: 1,
     getNextPageParam: (lastPage, allPages) => {
       const currentPage = allPages.length;
@@ -75,7 +72,6 @@ export function DiscoverPage() {
     staleTime: 30_000,
   });
 
-  const loading = isLoading || (isFetching && !isFetchingNextPage);
   const totalResults = data?.pages[0]?.total_results ?? 0;
 
   return (
@@ -95,7 +91,20 @@ export function DiscoverPage() {
           className="input-field w-auto min-w-[140px]"
         >
           <option value="">Усі жанри</option>
-          {genresData?.genres.map((g) => (
+          {[
+            { id: 28, name: "Бойовик" },
+            { id: 12, name: "Пригоди" },
+            { id: 16, name: "Анімація" },
+            { id: 35, name: "Комедія" },
+            { id: 80, name: "Кримінал" },
+            { id: 99, name: "Документальний" },
+            { id: 18, name: "Драма" },
+            { id: 14, name: "Фентезі" },
+            { id: 27, name: "Жахи" },
+            { id: 10749, name: "Мелодрама" },
+            { id: 878, name: "Фантастика" },
+            { id: 53, name: "Трилер" },
+          ].map((g) => (
             <option key={g.id} value={g.id}>
               {g.name}
             </option>
@@ -155,16 +164,32 @@ export function DiscoverPage() {
         </label>
       </div>
 
-      {loading ? (
+      {isPending ? (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
           {Array.from({ length: 10 }).map((_, i) => (
             <div key={i} className="aspect-[2/3] animate-pulse rounded-lg bg-surface" />
           ))}
         </div>
+      ) : isError ? (
+        <div className="rounded-xl border border-blood/20 bg-blood/5 p-8 text-center">
+          <p className="meta-line">
+            {(error as Error)?.message ?? "Не вдалося завантажити фільми"}
+          </p>
+          <button
+            type="button"
+            onClick={() => refetch()}
+            className="btn-primary mt-4 rounded-lg px-5 py-2.5"
+          >
+            Спробувати знову
+          </button>
+        </div>
       ) : results.length === 0 ? (
-        <p className="meta-line italic">
-          Нічого не знайдено — спробуйте інші фільтри
-        </p>
+        <div className="text-center">
+          <p className="meta-line italic">
+            Нічого не знайдено — спробуйте інші фільтри
+            {excludeOwned && " або вимкніть «Без моїх фільмів»"}
+          </p>
+        </div>
       ) : (
         <>
           <p className="mb-4 font-ui text-[11px] text-mist/60">
