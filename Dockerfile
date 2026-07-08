@@ -25,8 +25,9 @@ RUN mkdir -p /data
 
 COPY package.json package-lock.json ./
 COPY server/package.json ./server/
+COPY server/prisma ./server/prisma
 
-RUN npm ci --omit=dev
+RUN npm ci --omit=dev --ignore-scripts
 
 COPY --from=builder /app/server/dist ./server/dist
 COPY --from=builder /app/server/prisma ./server/prisma
