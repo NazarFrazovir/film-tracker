@@ -28,6 +28,28 @@ export interface TMDBCastMember {
   profile_path: string | null;
 }
 
+export interface TMDBCrewMember {
+  id: number;
+  name: string;
+  job: string;
+  department: string;
+  profile_path: string | null;
+}
+
+export interface WatchProvider {
+  provider_id: number;
+  provider_name: string;
+  logo_path: string | null;
+}
+
+export interface MovieWatchProviders {
+  region: string;
+  link: string | null;
+  flatrate: WatchProvider[];
+  rent: WatchProvider[];
+  buy: WatchProvider[];
+}
+
 export interface TMDBPerson {
   id: number;
   name: string;
@@ -65,6 +87,8 @@ export interface ListTemplate {
 export interface MovieExtras {
   trailerKey: string | null;
   cast: TMDBCastMember[];
+  directors: TMDBCrewMember[];
+  writers: TMDBCrewMember[];
   similar: TMDBMovie[];
   recommendations: TMDBMovie[];
 }

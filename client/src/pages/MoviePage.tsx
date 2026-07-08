@@ -1,7 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
 import { api, getImageUrl } from "../api/client";
+import { moviesApi } from "../api/movies";
 import { CastRow } from "../components/CastRow";
+import { CrewRow } from "../components/CrewRow";
+import { WatchProviders } from "../components/WatchProviders";
 import { CustomListPicker } from "../components/CustomListPicker";
 import { MovieActions } from "../components/MovieActions";
 import { TagEditor } from "../components/TagEditor";
@@ -26,6 +29,13 @@ export function MoviePage() {
     queryKey: ["movie-extras", tmdbId],
     queryFn: () => api.movies.extras(tmdbId),
     enabled: Number.isFinite(tmdbId) && !!data,
+  });
+
+  const { data: providers } = useQuery({
+    queryKey: ["movie-providers", tmdbId],
+    queryFn: () => moviesApi.providers(tmdbId),
+    enabled: Number.isFinite(tmdbId) && !!data,
+    staleTime: 60 * 60_000,
   });
 
   if (!Number.isFinite(tmdbId)) {
@@ -168,6 +178,8 @@ export function MoviePage() {
               initialTags={tags}
               isLoggedIn={!!user}
             />
+
+            {providers && <WatchProviders data={providers} />}
           </div>
         </div>
 
@@ -182,6 +194,10 @@ export function MoviePage() {
         )}
 
         {extras?.cast && <CastRow cast={extras.cast} />}
+
+        {extras && (extras.directors?.length > 0 || extras.writers?.length > 0) && (
+          <CrewRow directors={extras.directors ?? []} writers={extras.writers ?? []} />
+        )}
 
         {extras?.similar && extras.similar.length > 0 && (
           <MovieRow

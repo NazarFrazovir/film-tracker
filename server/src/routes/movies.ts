@@ -5,6 +5,7 @@ import {
   TMDB_GENRES,
   discoverMovies,
   getMovieExtras,
+  getMovieWatchProviders,
   getPersonDetails,
   getPersonMovieCredits,
   searchMovies,
@@ -205,33 +206,65 @@ router.get("/recommendations", requireAuth, async (req: AuthedRequest, res) => {
   const userId = req.user!.userId;
 
   try {
-    const [favorites, legendary] = await Promise.all([
+    const [favorites, legendary, ratedWatched] = await Promise.all([
       prisma.favorite.findMany({ where: { userId }, select: { tmdbId: true } }),
       prisma.legendary.findMany({ where: { userId }, select: { tmdbId: true } }),
+      prisma.watchedItem.findMany({
+        where: { userId, rating: { gte: 7 } },
+        select: { tmdbId: true, rating: true },
+      }),
     ]);
 
-    const seedIds = [...favorites, ...legendary].map((r) => r.tmdbId);
     const owned = await getUserTmdbIds(userId);
 
-    let basedOn: string | null = null;
-    let genreId: number | undefined;
+    const genreCounts = new Map<number, number>();
+    const sourceWeights = { legendary: 0, favorites: 0, rated: 0 };
+
+    const seedIds = [
+      ...legendary.map((r) => r.tmdbId),
+      ...favorites.map((r) => r.tmdbId),
+      ...ratedWatched.map((r) => r.tmdbId),
+    ];
 
     if (seedIds.length > 0) {
       const movieMap = await getMoviesCached(seedIds);
-      const genreCounts = new Map<number, number>();
 
-      for (const id of seedIds) {
-        const movie = movieMap.get(id);
-        if (!movie) continue;
+      const addWeight = (tmdbId: number, weight: number, source: keyof typeof sourceWeights) => {
+        const movie = movieMap.get(tmdbId);
+        if (!movie) return;
+        sourceWeights[source] += weight;
         for (const g of movie.genres ?? []) {
-          genreCounts.set(g.id, (genreCounts.get(g.id) ?? 0) + 1);
+          genreCounts.set(g.id, (genreCounts.get(g.id) ?? 0) + weight);
         }
-      }
+      };
 
-      const topGenre = [...genreCounts.entries()].sort((a, b) => b[1] - a[1])[0];
-      if (topGenre) {
-        genreId = topGenre[0];
-        basedOn = TMDB_GENRES.find((g) => g.id === topGenre[0])?.name ?? null;
+      for (const row of legendary) addWeight(row.tmdbId, 3, "legendary");
+      for (const row of favorites) addWeight(row.tmdbId, 2, "favorites");
+      for (const row of ratedWatched) {
+        const weight = row.rating! >= 9 ? 3 : row.rating! >= 8 ? 2 : 1;
+        addWeight(row.tmdbId, weight, "rated");
+      }
+    }
+
+    const topGenre = [...genreCounts.entries()].sort((a, b) => b[1] - a[1])[0];
+    const genreId = topGenre?.[0];
+    const genreName = genreId
+      ? (TMDB_GENRES.find((g) => g.id === genreId)?.name ?? null)
+      : null;
+
+    let reason: string | null = null;
+    if (genreName) {
+      const topSource = (Object.entries(sourceWeights) as [keyof typeof sourceWeights, number][])
+        .sort((a, b) => b[1] - a[1])[0];
+
+      if (topSource[1] > 0) {
+        const sourceLabel =
+          topSource[0] === "legendary"
+            ? "легендарних фільмів"
+            : topSource[0] === "favorites"
+              ? "улюблених фільмів"
+              : "високих оцінок";
+        reason = `На основі ${sourceLabel} — жанр «${genreName}»`;
       }
     }
 
@@ -246,7 +279,7 @@ router.get("/recommendations", requireAuth, async (req: AuthedRequest, res) => {
       .filter((m) => !owned.has(m.id))
       .slice(0, 12);
 
-    res.json({ results, basedOn });
+    res.json({ results, basedOn: genreName, reason });
   } catch {
     res.status(502).json({ error: "Не вдалося отримати рекомендації" });
   }
@@ -301,6 +334,23 @@ router.get("/:tmdbId/extras", async (req, res) => {
     res.json(extras);
   } catch {
     res.status(502).json({ error: "Не вдалося завантажити додаткові дані" });
+  }
+});
+
+router.get("/:tmdbId/providers", async (req, res) => {
+  const tmdbId = Number(req.params.tmdbId);
+  if (!Number.isFinite(tmdbId)) {
+    res.status(400).json({ error: "Невірний ID" });
+    return;
+  }
+
+  const region = String(req.query.region ?? "UA").toUpperCase();
+
+  try {
+    const providers = await getMovieWatchProviders(tmdbId, region);
+    res.json(providers);
+  } catch {
+    res.status(502).json({ error: "Не вдалося завантажити провайдерів" });
   }
 });
 

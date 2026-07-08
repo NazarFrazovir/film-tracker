@@ -2,6 +2,7 @@ import type {
   CollectionState,
   DiscoverFilters,
   MovieExtras,
+  MovieWatchProviders,
   MovieTag,
   PersonFilmCredit,
   TMDBMovie,
@@ -27,6 +28,11 @@ export const moviesApi = {
 
   extras: (tmdbId: number) =>
     request<MovieExtras>(`/api/movies/${tmdbId}/extras`),
+
+  providers: (tmdbId: number, region = "UA") =>
+    request<MovieWatchProviders>(
+      `/api/movies/${tmdbId}/providers?region=${encodeURIComponent(region)}`,
+    ),
 
   statusBatch: (tmdbIds: number[]) =>
     request<
@@ -76,7 +82,7 @@ export const moviesApi = {
   },
 
   recommendations: () =>
-    request<{ results: TMDBMovie[]; basedOn: string | null }>(
+    request<{ results: TMDBMovie[]; basedOn: string | null; reason: string | null }>(
       "/api/movies/recommendations",
     ),
 

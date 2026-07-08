@@ -32,7 +32,7 @@ export function RecommendationsPreview() {
   return (
     <RecommendationsContent
       movies={data.results}
-      basedOn={data.basedOn}
+      reason={data.reason ?? data.basedOn}
       movieIds={movieIds}
     />
   );
@@ -40,11 +40,11 @@ export function RecommendationsPreview() {
 
 function RecommendationsContent({
   movies,
-  basedOn,
+  reason,
   movieIds,
 }: {
   movies: Parameters<typeof SearchMovieCard>[0]["movie"][];
-  basedOn: string | null;
+  reason: string | null;
   movieIds: number[];
 }) {
   const { data: statuses } = useQuery({
@@ -69,11 +69,7 @@ function RecommendationsContent({
         <div>
           <span className="label">Для вас</span>
           <h2 className="title-section mt-1">Рекомендації</h2>
-          {basedOn && (
-            <p className="meta-line mt-1">
-              На основі ваших улюблених — жанр «{basedOn}»
-            </p>
-          )}
+          {reason && <p className="meta-line mt-1">{reason}</p>}
         </div>
         <Link
           to="/discover"

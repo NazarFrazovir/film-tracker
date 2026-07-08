@@ -49,6 +49,28 @@ export interface TMDBCastMember {
   order: number;
 }
 
+export interface TMDBCrewMember {
+  id: number;
+  name: string;
+  job: string;
+  department: string;
+  profile_path: string | null;
+}
+
+export interface TMDBWatchProvider {
+  provider_id: number;
+  provider_name: string;
+  logo_path: string | null;
+  display_priority: number;
+}
+
+export interface TMDBWatchProvidersResult {
+  link: string;
+  flatrate?: TMDBWatchProvider[];
+  rent?: TMDBWatchProvider[];
+  buy?: TMDBWatchProvider[];
+}
+
 export interface TMDBPaginatedResponse<T> {
   page: number;
   results: T[];
@@ -59,7 +81,7 @@ export interface TMDBPaginatedResponse<T> {
 export interface TMDBMovieDetails extends TMDBMovie {
   genres: TMDBGenre[];
   videos?: { results: TMDBVideo[] };
-  credits?: { cast: TMDBCastMember[] };
+  credits?: { cast: TMDBCastMember[]; crew: TMDBCrewMember[] };
 }
 
 export function getImageUrl(
@@ -117,6 +139,28 @@ export async function getMovieDetails(id: number) {
   return tmdbFetch<TMDBMovieDetails>(`/movie/${id}`);
 }
 
+const WRITER_JOBS = new Set(["Screenplay", "Writer", "Story", "Screenstory", "Author"]);
+
+function extractKeyCrew(crew: TMDBCrewMember[]) {
+  const directors: TMDBCrewMember[] = [];
+  const writers: TMDBCrewMember[] = [];
+  const seenDirectors = new Set<number>();
+  const seenWriters = new Set<number>();
+
+  for (const member of crew) {
+    if (member.job === "Director" && !seenDirectors.has(member.id)) {
+      seenDirectors.add(member.id);
+      directors.push(member);
+    } else if (WRITER_JOBS.has(member.job) && !seenWriters.has(member.id)) {
+      seenWriters.add(member.id);
+      writers.push(member);
+    }
+    if (directors.length >= 4 && writers.length >= 4) break;
+  }
+
+  return { directors: directors.slice(0, 4), writers: writers.slice(0, 4) };
+}
+
 export async function getMovieExtras(id: number) {
   const [details, similar, recommendations] = await Promise.all([
     tmdbFetch<TMDBMovieDetails>(`/movie/${id}`, {
@@ -126,11 +170,39 @@ export async function getMovieExtras(id: number) {
     tmdbFetch<TMDBPaginatedResponse<TMDBMovie>>(`/movie/${id}/recommendations`),
   ]);
 
+  const { directors, writers } = extractKeyCrew(details.credits?.crew ?? []);
+
   return {
     trailerKey: getTrailerKey(details),
     cast: (details.credits?.cast ?? []).slice(0, 8),
+    directors,
+    writers,
     similar: similar.results.slice(0, 8),
     recommendations: recommendations.results.slice(0, 8),
+  };
+}
+
+const DEFAULT_WATCH_REGION = "UA";
+
+export async function getMovieWatchProviders(id: number, region = DEFAULT_WATCH_REGION) {
+  const data = await tmdbFetch<{ results: Record<string, TMDBWatchProvidersResult> }>(
+    `/movie/${id}/watch/providers`,
+  );
+
+  const regional = data.results[region] ?? data.results.US ?? null;
+  if (!regional) {
+    return { region, link: null, flatrate: [], rent: [], buy: [] };
+  }
+
+  const sortProviders = (list: TMDBWatchProvider[] = []) =>
+    [...list].sort((a, b) => a.display_priority - b.display_priority);
+
+  return {
+    region,
+    link: regional.link ?? null,
+    flatrate: sortProviders(regional.flatrate),
+    rent: sortProviders(regional.rent),
+    buy: sortProviders(regional.buy),
   };
 }
 
