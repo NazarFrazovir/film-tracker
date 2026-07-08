@@ -10,6 +10,7 @@ import listsRoutes from "./routes/lists.js";
 import tagsRoutes from "./routes/tags.js";
 import dataRoutes from "./routes/data.js";
 import settingsRoutes from "./routes/settings.js";
+import profileRoutes from "./routes/profile.js";
 
 const app = express();
 const port = Number(process.env.PORT ?? 4000);
@@ -36,6 +37,7 @@ app.use("/api/lists", listsRoutes);
 app.use("/api/tags", tagsRoutes);
 app.use("/api/data", dataRoutes);
 app.use("/api/settings", settingsRoutes);
+app.use("/api/profile", profileRoutes);
 
 app.listen(port, () => {
   console.log(`Film Tracker API: http://localhost:${port}`);

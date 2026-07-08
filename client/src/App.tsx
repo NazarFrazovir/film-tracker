@@ -10,6 +10,7 @@ import { RegisterPage } from "./pages/RegisterPage";
 import { SearchPage } from "./pages/SearchPage";
 import { ListDetailPage } from "./pages/ListDetailPage";
 import { ListsPage } from "./pages/ListsPage";
+import { ProfilePage } from "./pages/ProfilePage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { StatsPage } from "./pages/StatsPage";
 import { DiaryPage } from "./pages/DiaryPage";
@@ -98,6 +99,14 @@ function AppShell() {
               element={
                 <ProtectedRoute>
                   <TagDetailPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <ProfilePage />
                 </ProtectedRoute>
               }
             />

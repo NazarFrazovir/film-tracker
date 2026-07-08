@@ -11,6 +11,7 @@ import type {
   TMDBMovie,
   TonightFilters,
   User,
+  UserProfile,
   UserStats,
   YearReview,
 } from "../types";
@@ -61,6 +62,10 @@ export const api = {
   },
 
   movies: moviesApi,
+
+  profile: {
+    get: () => request<UserProfile>("/api/profile"),
+  },
 
   stats: {
     get: () => request<UserStats>("/api/stats"),

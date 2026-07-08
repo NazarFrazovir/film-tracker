@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { ExportImportPanel } from "../components/ExportImportPanel";
 import { toast } from "../components/Toast";
@@ -68,6 +68,9 @@ export function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 pb-20 pt-8 md:px-8 md:pt-12">
+      <Link to="/profile" className="settings-back-link">
+        ← Профіль
+      </Link>
       <span className="label">Акаунт</span>
       <h1 className="title-section mt-1">Налаштування</h1>
       <p className="meta-line mt-2 mb-10">Профіль, безпека та резервні копії</p>

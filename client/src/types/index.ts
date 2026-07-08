@@ -7,6 +7,30 @@ export interface User {
   createdAt?: string;
 }
 
+export interface UserProfile {
+  user: {
+    id: string;
+    email: string;
+    name: string | null;
+    watchGoal: number | null;
+    createdAt: string;
+  };
+  counts: {
+    favorites: number;
+    legendary: number;
+    watchlist: number;
+    watched: number;
+    customLists: number;
+    tags: number;
+    total: number;
+  };
+  yearWatched: number;
+  avgUserRating: number | null;
+  ratedCount: number;
+  topGenre: { name: string; count: number } | null;
+  topRated: { tmdbId: number; rating: number; movie: TMDBMovie | null }[];
+}
+
 export interface TMDBMovie {
   id: number;
   title: string;

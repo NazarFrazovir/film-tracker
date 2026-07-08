@@ -1,4 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
+import { ProfileAvatar } from "./ProfileAvatar";
 import { useAuth } from "../context/AuthContext";
 
 const NAV = [
@@ -35,7 +36,8 @@ export function Header() {
                   (item.to === "/lists" && location.pathname.startsWith("/lists")) ||
                   (item.to === "/tags" && location.pathname.startsWith("/tags")) ||
                   (item.to === "/diary" && location.pathname.startsWith("/diary")) ||
-                  (item.to === "/discover" && location.pathname.startsWith("/discover"))
+                  (item.to === "/discover" && location.pathname.startsWith("/discover")) ||
+                  (item.to === "/profile" && location.pathname.startsWith("/profile"))
                     ? "bg-ember/10 text-ember-light"
                     : "text-mist hover:text-fog"
                 }`}
@@ -46,9 +48,15 @@ export function Header() {
 
           {user ? (
             <div className="ml-2 flex items-center gap-3 border-l border-white/8 pl-3 md:ml-4 md:pl-4">
-              <span className="hidden font-ui text-[11px] text-mist/70 md:inline">
-                {user.name || user.email}
-              </span>
+              <Link
+                to="/profile"
+                className={`profile-header-link ${
+                  location.pathname === "/profile" ? "profile-header-link--active" : ""
+                }`}
+                title="Профіль"
+              >
+                <ProfileAvatar name={user.name} email={user.email} size="sm" />
+              </Link>
               <Link
                 to="/settings"
                 className={`rounded-lg px-2 py-2 font-ui text-[11px] transition md:px-3 ${
