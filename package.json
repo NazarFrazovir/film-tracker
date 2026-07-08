@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "concurrently -n server,client -c yellow,cyan \"npm run dev -w server\" \"npm run dev -w client\"",
     "build": "npm run build -w server && npm run build -w client",
+    "start": "npm run start -w server",
     "db:push": "npm run db:push -w server",
     "db:generate": "npm run db:generate -w server"
   },

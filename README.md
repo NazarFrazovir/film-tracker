@@ -50,26 +50,54 @@ npm run dev
 | `npm run db:push` | Синхронізація Prisma schema → БД |
 | `npm run db:generate` | Генерація Prisma Client |
 
-## Production (PostgreSQL)
+## Production deploy
+
+Додаток збирається в **один Docker-контейнер**: Express API + React SPA з одного домену (cookies працюють без CORS-проблем).
+
+### Railway (рекомендовано)
+
+1. [railway.app](https://railway.app) → **New Project** → **Deploy from GitHub** → `film-tracker`
+2. Додайте **Volume** з mount path `/data` (для SQLite БД)
+3. Змінні середовища:
+
+| Змінна | Значення |
+|--------|----------|
+| `NODE_ENV` | `production` |
+| `DATABASE_URL` | `file:/data/prod.db` |
+| `AUTH_SECRET` | випадковий рядок 32+ символів |
+| `TMDB_API_KEY` | ключ з themoviedb.org |
+| `TMDB_ACCESS_TOKEN` | read access token TMDB |
+
+`CLIENT_URL` підставиться автоматично з `RAILWAY_PUBLIC_DOMAIN`.
+
+4. **Settings** → **Networking** → **Generate Domain**
+
+### Render
+
+1. [render.com](https://render.com) → **New** → **Blueprint** → підключіть репо
+2. Використовується `render.yaml` (потрібен Starter plan для persistent disk)
+3. Заповніть `TMDB_API_KEY`, `TMDB_ACCESS_TOKEN`, `CLIENT_URL` (URL вашого Render-сервісу)
+
+### Локальний Docker
+
+```bash
+docker build -t film-tracker .
+docker run -p 4000:4000 -v film-tracker-data:/data \
+  -e AUTH_SECRET=dev-secret-change-me-in-production \
+  -e TMDB_API_KEY=... \
+  -e TMDB_ACCESS_TOKEN=... \
+  film-tracker
+```
+
+Відкрийте http://localhost:4000
+
+### PostgreSQL (опційно)
+
+Для великого навантаження замість SQLite:
 
 1. У `server/prisma/schema.prisma` змініть `provider` на `postgresql`
-2. Встановіть `DATABASE_URL` (наприклад `postgresql://user:pass@host:5432/filmtracker`)
-3. `npm run db:push` на production-сервері
-4. Зберіть і задеплойте:
-   - **Client** → Vercel / Netlify (статика + proxy `/api`)
-   - **Server** → Railway / Fly.io / Render
-
-Змінні середовища для production:
-
-```
-DATABASE_URL=postgresql://...
-TMDB_API_KEY=...
-TMDB_ACCESS_TOKEN=...
-AUTH_SECRET=<random-32-chars>
-CLIENT_URL=https://your-frontend.vercel.app
-PORT=4000
-NODE_ENV=production
-```
+2. `DATABASE_URL=postgresql://user:pass@host:5432/filmtracker`
+3. Приберіть volume mount — БД на managed Postgres (Railway/Render addon)
 
 ## Структура
 

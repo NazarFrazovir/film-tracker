@@ -1,0 +1,11 @@
+node_modules
+dist
+.git
+.github
+*.tsbuildinfo
+.env
+server/.env
+server/prisma/dev.db
+server/prisma/*.db-journal
+*.md
+terminals
