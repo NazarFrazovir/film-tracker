@@ -5,6 +5,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY client/package.json ./client/
 COPY server/package.json ./server/
+COPY server/prisma ./server/prisma
 
 RUN npm ci
 
