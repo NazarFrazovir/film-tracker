@@ -6,7 +6,7 @@ import type {
   MovieWatchProviders,
   MovieTag,
   PersonFilmCredit,
-  SearchMediaItem,
+  SearchMediaResponse,
   TMDBMovie,
   TMDBPerson,
 } from "../types";
@@ -21,11 +21,9 @@ export const moviesApi = {
     }>(`/api/movies/search?q=${encodeURIComponent(q)}&page=${page}`),
 
   searchMulti: (q: string, page = 1) =>
-    request<{
-      results: SearchMediaItem[];
-      total_pages: number;
-      total_results: number;
-    }>(`/api/movies/search/multi?q=${encodeURIComponent(q)}&page=${page}`),
+    request<SearchMediaResponse>(
+      `/api/movies/search/multi?q=${encodeURIComponent(q)}&page=${page}`,
+    ),
 
   get: (tmdbId: number) =>
     request<{

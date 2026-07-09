@@ -73,6 +73,15 @@ export interface SearchMediaItem {
   vote_average: number;
 }
 
+export interface SearchMediaResponse {
+  results: SearchMediaItem[];
+  total_pages: number;
+  total_results: number;
+  page?: number;
+  movie_count?: number;
+  tv_count?: number;
+}
+
 export interface TMDBCastMember {
   id: number;
   name: string;

@@ -1457,6 +1457,53 @@ button.star-rating__star:hover {
   color: var(--color-ember-light);
 }
 
+/* ── Search type filters ── */
+.search-type-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.search-type-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-family: var(--font-ui);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-mist);
+  background: transparent;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.search-type-filter:hover {
+  border-color: rgba(201, 162, 39, 0.3);
+  color: var(--color-fog);
+}
+
+.search-type-filter--active {
+  border-color: rgba(201, 162, 39, 0.45);
+  color: var(--color-ember-light);
+  background: rgba(201, 162, 39, 0.08);
+}
+
+.search-type-filter__count {
+  padding: 0.1rem 0.35rem;
+  border-radius: 999px;
+  font-size: 0.58rem;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.search-type-filter--active .search-type-filter__count {
+  background: rgba(201, 162, 39, 0.15);
+}
+
 /* ── Media badge ── */
 .media-badge {
   position: absolute;

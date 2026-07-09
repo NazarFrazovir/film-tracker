@@ -3,17 +3,28 @@ import { useEffect, useMemo, useState } from "react";
 import { api } from "../api/client";
 import { SearchMediaCard } from "../components/SearchMediaCard";
 import { toast } from "../components/Toast";
+import { useAuth } from "../context/AuthContext";
 import { mediaStatusKey } from "../lib/mediaUtils";
-import type { CollectionType, SearchMediaItem } from "../types";
+import type { CollectionType, MediaType, SearchMediaItem } from "../types";
+
+type MediaFilter = "all" | MediaType;
 
 function itemKey(item: SearchMediaItem) {
   return mediaStatusKey(item.id, item.mediaType);
 }
 
+const FILTER_OPTIONS: { id: MediaFilter; label: string }[] = [
+  { id: "all", label: "Усе" },
+  { id: "movie", label: "Фільми" },
+  { id: "tv", label: "Серіали" },
+];
+
 export function SearchPage() {
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [query, setQuery] = useState("");
   const [debounced, setDebounced] = useState("");
+  const [mediaFilter, setMediaFilter] = useState<MediaFilter>("all");
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
@@ -45,13 +56,21 @@ export function SearchPage() {
     [data],
   );
 
+  const filteredResults = useMemo(() => {
+    if (mediaFilter === "all") return results;
+    return results.filter((r) => r.mediaType === mediaFilter);
+  }, [results, mediaFilter]);
+
+  const movieCount = results.filter((r) => r.mediaType === "movie").length;
+  const tvCount = results.filter((r) => r.mediaType === "tv").length;
+
   const { data: statuses } = useQuery({
     queryKey: ["search-status", results.map(itemKey)],
     queryFn: () =>
       api.movies.statusBatch(
         results.map((r) => ({ tmdbId: r.id, mediaType: r.mediaType })),
       ),
-    enabled: results.length > 0,
+    enabled: results.length > 0 && !!user,
     staleTime: 30_000,
   });
 
@@ -106,7 +125,7 @@ export function SearchPage() {
       <span className="label">TMDB пошук</span>
       <h1 className="title-section mt-1">Знайти фільм або серіал</h1>
       <p className="meta-line mt-2 mb-8">
-        Фільми та серіали — додайте до будь-якої колекції
+        Окремий пошук по фільмах і серіалах TMDB
         <span className="ml-2 text-mist/50">(/ — фокус на пошук)</span>
       </p>
 
@@ -116,7 +135,7 @@ export function SearchPage() {
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Наприклад: Breaking Bad, Inception..."
+          placeholder="Наприклад: Ведмідь, Гра престолів, Inception..."
           className="input-field max-w-xl flex-1"
           autoFocus
         />
@@ -135,6 +154,33 @@ export function SearchPage() {
           {selectMode ? "Скасувати вибір" : "Обрати кілька"}
         </button>
       </div>
+
+      {debounced.length >= 2 && !searching && results.length > 0 && (
+        <div className="search-type-filters mt-4">
+          {FILTER_OPTIONS.map((opt) => {
+            const count =
+              opt.id === "all"
+                ? results.length
+                : opt.id === "movie"
+                  ? movieCount
+                  : tvCount;
+
+            return (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => setMediaFilter(opt.id)}
+                className={`search-type-filter ${
+                  mediaFilter === opt.id ? "search-type-filter--active" : ""
+                }`}
+              >
+                {opt.label}
+                <span className="search-type-filter__count">{count}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {selectMode && selectedCount > 0 && (
         <div className="bulk-toolbar mt-4">
@@ -175,15 +221,19 @@ export function SearchPage() {
               />
             ))}
           </div>
-        ) : results.length === 0 ? (
-          <p className="meta-line italic">Нічого не знайдено</p>
+        ) : filteredResults.length === 0 ? (
+          <p className="meta-line italic">
+            {results.length > 0 && mediaFilter !== "all"
+              ? "Немає результатів у цій категорії — спробуйте «Усе»"
+              : "Нічого не знайдено"}
+          </p>
         ) : (
           <>
             <p className="meta-line mb-6">
-              Знайдено: {totalResults} · показано {results.length}
+              Знайдено: {totalResults} · фільмів {movieCount} · серіалів {tvCount}
             </p>
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-              {results.map((item) => {
+              {filteredResults.map((item) => {
                 const key = itemKey(item);
                 return (
                   <div
@@ -207,7 +257,7 @@ export function SearchPage() {
                 );
               })}
             </div>
-            {hasNextPage && (
+            {hasNextPage && mediaFilter === "all" && (
               <div className="mt-10 text-center">
                 <button
                   type="button"

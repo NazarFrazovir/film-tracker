@@ -343,6 +343,7 @@ export async function searchMovies(query: string, page = 1) {
   return tmdbFetch<TMDBPaginatedResponse<TMDBMovie>>("/search/movie", {
     query: query.trim(),
     page: String(page),
+    include_adult: "false",
   });
 }
 
@@ -378,19 +379,6 @@ export interface SearchMediaItem {
   backdrop_path: string | null;
   release_date: string;
   vote_average: number;
-}
-
-interface TMDBMultiResult {
-  id: number;
-  media_type: "movie" | "tv" | "person";
-  title?: string;
-  name?: string;
-  overview?: string;
-  poster_path: string | null;
-  backdrop_path?: string | null;
-  release_date?: string;
-  first_air_date?: string;
-  vote_average?: number;
 }
 
 export async function getTvDetails(id: number) {
@@ -445,37 +433,89 @@ export async function getTvWatchProviders(
   };
 }
 
+function interleaveSearchResults(
+  tvItems: SearchMediaItem[],
+  movieItems: SearchMediaItem[],
+): SearchMediaItem[] {
+  const merged: SearchMediaItem[] = [];
+  const max = Math.max(tvItems.length, movieItems.length);
+
+  for (let i = 0; i < max; i++) {
+    if (i < tvItems.length) merged.push(tvItems[i]!);
+    if (i < movieItems.length) merged.push(movieItems[i]!);
+  }
+
+  return merged;
+}
+
+function toMovieSearchItem(movie: TMDBMovie): SearchMediaItem | null {
+  if (!movie.title?.trim()) return null;
+
+  return {
+    id: movie.id,
+    mediaType: "movie",
+    title: movie.title,
+    overview: movie.overview ?? "",
+    poster_path: movie.poster_path,
+    backdrop_path: movie.backdrop_path ?? null,
+    release_date: movie.release_date ?? "",
+    vote_average: movie.vote_average ?? 0,
+  };
+}
+
+function toTvSearchItem(show: TMDBTvShow): SearchMediaItem | null {
+  if (!show.name?.trim()) return null;
+
+  return {
+    id: show.id,
+    mediaType: "tv",
+    title: show.name,
+    overview: show.overview ?? "",
+    poster_path: show.poster_path,
+    backdrop_path: show.backdrop_path ?? null,
+    release_date: show.first_air_date ?? "",
+    vote_average: show.vote_average ?? 0,
+  };
+}
+
+export async function searchTvShows(query: string, page = 1) {
+  if (!query.trim()) {
+    return { page: 1, results: [], total_pages: 0, total_results: 0 };
+  }
+
+  return tmdbFetch<TMDBPaginatedResponse<TMDBTvShow>>("/search/tv", {
+    query: query.trim(),
+    page: String(page),
+    include_adult: "false",
+  });
+}
+
 export async function searchMulti(query: string, page = 1) {
   if (!query.trim()) {
     return { page: 1, results: [], total_pages: 0, total_results: 0 };
   }
 
-  const data = await tmdbFetch<TMDBPaginatedResponse<TMDBMultiResult>>("/search/multi", {
-    query: query.trim(),
-    page: String(page),
-  });
+  const [movies, tvShows] = await Promise.all([
+    searchMovies(query, page),
+    searchTvShows(query, page),
+  ]);
 
-  const results: SearchMediaItem[] = data.results
-    .filter(
-      (r): r is TMDBMultiResult & { media_type: "movie" | "tv" } =>
-        r.media_type === "movie" || r.media_type === "tv",
-    )
-    .map((r) => ({
-      id: r.id,
-      mediaType: r.media_type,
-      title: (r.media_type === "movie" ? r.title : r.name) ?? "",
-      overview: r.overview ?? "",
-      poster_path: r.poster_path,
-      backdrop_path: r.backdrop_path ?? null,
-      release_date: (r.media_type === "movie" ? r.release_date : r.first_air_date) ?? "",
-      vote_average: r.vote_average ?? 0,
-    }))
-    .filter((r) => r.title && r.poster_path);
+  const movieItems = movies.results
+    .map(toMovieSearchItem)
+    .filter((item): item is SearchMediaItem => item !== null);
+
+  const tvItems = tvShows.results
+    .map(toTvSearchItem)
+    .filter((item): item is SearchMediaItem => item !== null);
+
+  const results = interleaveSearchResults(tvItems, movieItems);
 
   return {
-    page: data.page,
-    total_pages: data.total_pages,
-    total_results: data.total_results,
+    page,
+    total_pages: Math.max(movies.total_pages, tvShows.total_pages),
+    total_results: movies.total_results + tvShows.total_results,
+    movie_count: movieItems.length,
+    tv_count: tvItems.length,
     results,
   };
 }
