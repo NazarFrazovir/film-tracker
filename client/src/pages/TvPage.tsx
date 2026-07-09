@@ -4,6 +4,7 @@ import { getImageUrl } from "../api/client";
 import { tvApi } from "../api/tv";
 
 import { CastRow } from "../components/CastRow";
+import { CustomListPicker } from "../components/CustomListPicker";
 import { MovieActions } from "../components/MovieActions";
 import { MovieVideos } from "../components/MovieVideos";
 import { MediaRow } from "../components/MediaRow";
@@ -74,7 +75,7 @@ export function TvPage() {
     );
   }
 
-  const { tv, collections } = data;
+  const { tv, collections, customListIds } = data;
   const poster = getImageUrl(tv.poster_path, "w500");
   const backdrop = getImageUrl(tv.backdrop_path, "w780");
   const year = tv.first_air_date?.slice(0, 4);
@@ -175,6 +176,13 @@ export function TvPage() {
               tmdbId={tmdbId}
               mediaType="tv"
               initial={collections}
+              isLoggedIn={!!user}
+            />
+
+            <CustomListPicker
+              tmdbId={tmdbId}
+              mediaType="tv"
+              initialListIds={customListIds}
               isLoggedIn={!!user}
             />
 

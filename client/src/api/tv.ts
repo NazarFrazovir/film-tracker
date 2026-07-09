@@ -22,6 +22,7 @@ export const tvApi = {
     request<{
       tv: TMDBTvShow;
       collections: CollectionState;
+      customListIds: string[];
     }>(`/api/tv/${tmdbId}`),
 
   extras: (tmdbId: number) => request<TvExtras>(`/api/tv/${tmdbId}/extras`),

@@ -1,8 +1,21 @@
 import { Router } from "express";
 import { z } from "zod";
-import { getMoviesCached, warmCache } from "../lib/movieCache.js";
+import { enrichCollectionItems } from "../lib/mediaEnrich.js";
+import { parseMediaType, type MediaType } from "../lib/mediaType.js";
+import { warmCache } from "../lib/movieCache.js";
 import { prisma } from "../lib/prisma.js";
+import { warmTvCache } from "../lib/tvCache.js";
 import { requireAuth, type AuthedRequest } from "../middleware/auth.js";
+
+function mediaTypeFromReq(req: { query: Record<string, unknown>; body?: unknown }): MediaType {
+  const body = req.body as { mediaType?: unknown } | undefined;
+  return parseMediaType(req.query.mediaType ?? body?.mediaType);
+}
+
+function warmMedia(tmdbId: number, mediaType: MediaType) {
+  if (mediaType === "tv") warmTvCache(tmdbId);
+  else warmCache(tmdbId);
+}
 
 const router = Router();
 
@@ -140,7 +153,13 @@ router.get("/:id", requireAuth, async (req: AuthedRequest, res) => {
     return;
   }
 
-  const movieMap = await getMoviesCached(list.items.map((i) => i.tmdbId));
+  const items = await enrichCollectionItems(
+    list.items.map((item) => ({
+      tmdbId: item.tmdbId,
+      mediaType: parseMediaType(item.mediaType),
+      date: item.addedAt,
+    })),
+  );
 
   res.json({
     id: list.id,
@@ -151,12 +170,7 @@ router.get("/:id", requireAuth, async (req: AuthedRequest, res) => {
     parent: list.parent,
     children: list.children.map(mapChild),
     canHaveChildren: list.parentId === null,
-    items: list.items.map((item) => ({
-      tmdbId: item.tmdbId,
-      position: item.position,
-      date: item.addedAt.toISOString(),
-      movie: movieMap.get(item.tmdbId) ?? null,
-    })),
+    items,
   });
 });
 
@@ -215,9 +229,10 @@ router.post("/:id/items/:tmdbId", requireAuth, async (req: AuthedRequest, res) =
   const userId = req.user!.userId;
   const id = String(req.params.id);
   const tmdbId = Number(req.params.tmdbId);
+  const mediaType = mediaTypeFromReq(req);
 
   if (!Number.isFinite(tmdbId)) {
-    res.status(400).json({ error: "Невірний ID фільму" });
+    res.status(400).json({ error: "Невірний ID" });
     return;
   }
 
@@ -233,10 +248,11 @@ router.post("/:id/items/:tmdbId", requireAuth, async (req: AuthedRequest, res) =
   });
 
   await prisma.customListItem.upsert({
-    where: { listId_tmdbId_mediaType: { listId: id, tmdbId, mediaType: "movie" } },
+    where: { listId_tmdbId_mediaType: { listId: id, tmdbId, mediaType } },
     create: {
       listId: id,
       tmdbId,
+      mediaType,
       position: (maxPos._max.position ?? -1) + 1,
     },
     update: {},
@@ -249,13 +265,19 @@ router.post("/:id/items/:tmdbId", requireAuth, async (req: AuthedRequest, res) =
       data: { updatedAt: new Date() },
     });
   }
-  warmCache(tmdbId);
+  warmMedia(tmdbId, mediaType);
 
   res.json({ success: true, added: true });
 });
 
+const reorderItemSchema = z.object({
+  tmdbId: z.number().int(),
+  mediaType: z.enum(["movie", "tv"]).optional(),
+});
+
 const reorderSchema = z.object({
-  tmdbIds: z.array(z.number().int()).min(1),
+  items: z.array(reorderItemSchema).min(1).optional(),
+  tmdbIds: z.array(z.number().int()).min(1).optional(),
 });
 
 router.patch("/:id/reorder", requireAuth, async (req: AuthedRequest, res) => {
@@ -275,21 +297,43 @@ router.patch("/:id/reorder", requireAuth, async (req: AuthedRequest, res) => {
   }
 
   const existing = await prisma.customListItem.findMany({ where: { listId: id } });
-  const existingIds = new Set(existing.map((i) => i.tmdbId));
-  const { tmdbIds } = parsed.data;
+  const itemKey = (tmdbId: number, mediaType: MediaType) => `${mediaType}:${tmdbId}`;
+
+  const orderedItems =
+    parsed.data.items ??
+    parsed.data.tmdbIds?.map((tmdbId) => ({ tmdbId, mediaType: "movie" as const })) ??
+    [];
+
+  if (!orderedItems.length) {
+    res.status(400).json({ error: "Невірні дані" });
+    return;
+  }
+
+  const existingKeys = new Set(
+    existing.map((i) => itemKey(i.tmdbId, parseMediaType(i.mediaType))),
+  );
+  const orderedKeys = orderedItems.map((i) =>
+    itemKey(i.tmdbId, parseMediaType(i.mediaType)),
+  );
 
   if (
-    tmdbIds.length !== existing.length ||
-    !tmdbIds.every((tid) => existingIds.has(tid))
+    orderedKeys.length !== existing.length ||
+    !orderedKeys.every((key) => existingKeys.has(key))
   ) {
-    res.status(400).json({ error: "Невірний список фільмів" });
+    res.status(400).json({ error: "Невірний список елементів" });
     return;
   }
 
   await prisma.$transaction(
-    tmdbIds.map((tmdbId, position) =>
+    orderedItems.map((item, position) =>
       prisma.customListItem.update({
-        where: { listId_tmdbId_mediaType: { listId: id, tmdbId, mediaType: "movie" } },
+        where: {
+          listId_tmdbId_mediaType: {
+            listId: id,
+            tmdbId: item.tmdbId,
+            mediaType: parseMediaType(item.mediaType),
+          },
+        },
         data: { position },
       }),
     ),
@@ -304,6 +348,7 @@ router.delete("/:id/items/:tmdbId", requireAuth, async (req: AuthedRequest, res)
   const userId = req.user!.userId;
   const id = String(req.params.id);
   const tmdbId = Number(req.params.tmdbId);
+  const mediaType = mediaTypeFromReq(req);
 
   const list = await prisma.customList.findFirst({ where: { id, userId } });
   if (!list) {
@@ -311,7 +356,7 @@ router.delete("/:id/items/:tmdbId", requireAuth, async (req: AuthedRequest, res)
     return;
   }
 
-  await prisma.customListItem.deleteMany({ where: { listId: id, tmdbId } });
+  await prisma.customListItem.deleteMany({ where: { listId: id, tmdbId, mediaType } });
   await prisma.customList.update({ where: { id }, data: { updatedAt: new Date() } });
 
   res.json({ success: true, added: false });

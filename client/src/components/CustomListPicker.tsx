@@ -2,16 +2,19 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
+import type { MediaType } from "../types";
 import { toast } from "./Toast";
 
 interface CustomListPickerProps {
   tmdbId: number;
+  mediaType?: MediaType;
   initialListIds: string[];
   isLoggedIn: boolean;
 }
 
 export function CustomListPicker({
   tmdbId,
+  mediaType = "movie",
   initialListIds,
   isLoggedIn,
 }: CustomListPickerProps) {
@@ -27,9 +30,9 @@ export function CustomListPicker({
   const toggleMutation = useMutation({
     mutationFn: async ({ listId, isIn }: { listId: string; isIn: boolean }) => {
       if (isIn) {
-        await api.lists.removeItem(listId, tmdbId);
+        await api.lists.removeItem(listId, tmdbId, mediaType);
       } else {
-        await api.lists.addItem(listId, tmdbId);
+        await api.lists.addItem(listId, tmdbId, mediaType);
       }
       return { listId, isIn };
     },
@@ -40,7 +43,9 @@ export function CustomListPicker({
       toast(isIn ? "Прибрано зі списку" : "Додано до списку");
       queryClient.invalidateQueries({ queryKey: ["lists"] });
       queryClient.invalidateQueries({ queryKey: ["list"] });
-      queryClient.invalidateQueries({ queryKey: ["movie", tmdbId] });
+      queryClient.invalidateQueries({
+        queryKey: [mediaType === "tv" ? "tv" : "movie", tmdbId],
+      });
     },
     onError: (err: Error) => toast(err.message),
   });
@@ -75,7 +80,7 @@ export function CustomListPicker({
           <Link to="/lists" className="text-ember hover:text-ember-light">
             Створіть кастомний список
           </Link>
-          , щоб групувати фільми
+          , щоб групувати фільми та серіали
         </p>
       </div>
     );

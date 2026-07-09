@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { getCollectionState } from "../lib/collectionStatus.js";
+import { prisma } from "../lib/prisma.js";
 import { getTvShowCached } from "../lib/tvCache.js";
 import {
   getTvExtras,
@@ -62,11 +63,20 @@ router.get("/:tmdbId", optionalAuth, async (req: AuthedRequest, res) => {
       watchedAt: null as string | null,
     };
 
+    let customListIds: string[] = [];
+
     if (req.user) {
-      collections = await getCollectionState(req.user.userId, tmdbId, MEDIA_TYPE);
+      const userId = req.user.userId;
+      collections = await getCollectionState(userId, tmdbId, MEDIA_TYPE);
+
+      const listItems = await prisma.customListItem.findMany({
+        where: { tmdbId, mediaType: MEDIA_TYPE, list: { userId } },
+        select: { listId: true },
+      });
+      customListIds = listItems.map((i) => i.listId);
     }
 
-    res.json({ tv, collections });
+    res.json({ tv, collections, customListIds });
   } catch {
     res.status(404).json({ error: "Серіал не знайдено" });
   }

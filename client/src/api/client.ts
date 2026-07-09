@@ -139,14 +139,21 @@ export const api = {
       request(`/api/lists/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
     remove: (id: string) =>
       request<{ success: boolean }>(`/api/lists/${id}`, { method: "DELETE" }),
-    addItem: (listId: string, tmdbId: number) =>
-      request(`/api/lists/${listId}/items/${tmdbId}`, { method: "POST" }),
-    removeItem: (listId: string, tmdbId: number) =>
-      request(`/api/lists/${listId}/items/${tmdbId}`, { method: "DELETE" }),
-    reorder: (listId: string, tmdbIds: number[]) =>
+    addItem: (listId: string, tmdbId: number, mediaType: MediaType = "movie") =>
+      request(`/api/lists/${listId}/items/${tmdbId}?mediaType=${mediaType}`, {
+        method: "POST",
+      }),
+    removeItem: (listId: string, tmdbId: number, mediaType: MediaType = "movie") =>
+      request(`/api/lists/${listId}/items/${tmdbId}?mediaType=${mediaType}`, {
+        method: "DELETE",
+      }),
+    reorder: (
+      listId: string,
+      items: { tmdbId: number; mediaType: MediaType }[],
+    ) =>
       request<{ success: boolean }>(`/api/lists/${listId}/reorder`, {
         method: "PATCH",
-        body: JSON.stringify({ tmdbIds }),
+        body: JSON.stringify({ items }),
       }),
   },
 
