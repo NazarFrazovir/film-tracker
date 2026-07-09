@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
 import type { MediaType } from "../types";
@@ -8,24 +8,28 @@ import { toast } from "./Toast";
 interface CustomListPickerProps {
   tmdbId: number;
   mediaType?: MediaType;
-  initialListIds: string[];
+  initialListIds?: string[];
   isLoggedIn: boolean;
 }
 
 export function CustomListPicker({
   tmdbId,
   mediaType = "movie",
-  initialListIds,
+  initialListIds = [],
   isLoggedIn,
 }: CustomListPickerProps) {
   const queryClient = useQueryClient();
   const [activeIds, setActiveIds] = useState(initialListIds);
 
-  const { data: lists } = useQuery({
+  const { data: lists, isLoading } = useQuery({
     queryKey: ["lists"],
     queryFn: () => api.lists.all(),
     enabled: isLoggedIn,
   });
+
+  useEffect(() => {
+    setActiveIds(initialListIds);
+  }, [initialListIds]);
 
   const toggleMutation = useMutation({
     mutationFn: async ({ listId, isIn }: { listId: string; isIn: boolean }) => {
@@ -71,6 +75,15 @@ export function CustomListPicker({
   };
 
   if (!isLoggedIn) return null;
+
+  if (isLoading) {
+    return (
+      <div className="mt-6">
+        <span className="label">Мої списки</span>
+        <div className="mt-3 h-9 w-48 animate-pulse rounded-lg bg-surface" />
+      </div>
+    );
+  }
 
   if (!lists?.length) {
     return (

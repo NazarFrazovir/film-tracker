@@ -75,7 +75,7 @@ export function TvPage() {
     );
   }
 
-  const { tv, collections, customListIds } = data;
+  const { tv, collections, customListIds = [] } = data;
   const poster = getImageUrl(tv.poster_path, "w500");
   const backdrop = getImageUrl(tv.backdrop_path, "w780");
   const year = tv.first_air_date?.slice(0, 4);

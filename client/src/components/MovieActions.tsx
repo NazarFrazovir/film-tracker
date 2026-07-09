@@ -39,7 +39,9 @@ export function MovieActions({
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["collection"] });
     queryClient.invalidateQueries({ queryKey: ["summary"] });
-    queryClient.invalidateQueries({ queryKey: ["movie", tmdbId] });
+    queryClient.invalidateQueries({
+      queryKey: [mediaType === "tv" ? "tv" : "movie", tmdbId],
+    });
     queryClient.invalidateQueries({ queryKey: ["stats"] });
     queryClient.invalidateQueries({ queryKey: ["hero"] });
   };
