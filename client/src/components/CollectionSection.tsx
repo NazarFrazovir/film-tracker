@@ -2,9 +2,15 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { api } from "../api/client";
 import { filterAndSortItems, getUniqueGenres } from "../lib/collectionFilters";
+import {
+  entryHasMedia,
+  getEntryTitle,
+  movieToCardProps,
+  tvToCardProps,
+} from "../lib/mediaUtils";
 import { COLLECTION_META, type CollectionType, type SortOption } from "../types";
 import { CollectionFilters } from "./CollectionFilters";
-import { MovieCard } from "./MovieCard";
+import { MediaCard } from "./MediaCard";
 import { toast } from "./Toast";
 
 interface CollectionSectionProps {
@@ -25,7 +31,13 @@ export function CollectionSection({ type, count }: CollectionSectionProps) {
   });
 
   const removeMutation = useMutation({
-    mutationFn: (tmdbId: number) => api.collections.remove(type, tmdbId),
+    mutationFn: ({
+      tmdbId,
+      mediaType,
+    }: {
+      tmdbId: number;
+      mediaType: "movie" | "tv";
+    }) => api.collections.remove(type, tmdbId, mediaType),
     onSuccess: () => {
       toast("Прибрано з колекції");
       queryClient.invalidateQueries({ queryKey: ["collection", type] });
@@ -36,7 +48,7 @@ export function CollectionSection({ type, count }: CollectionSectionProps) {
     onError: (err: Error) => toast(err.message),
   });
 
-  const rawItems = data?.filter((i) => i.movie) ?? [];
+  const rawItems = data?.filter(entryHasMedia) ?? [];
   const genres = useMemo(() => getUniqueGenres(rawItems), [rawItems]);
 
   const items = useMemo(
@@ -84,27 +96,41 @@ export function CollectionSection({ type, count }: CollectionSectionProps) {
         <p className="font-body text-base italic text-mist/60">{meta.empty}</p>
       ) : items.length === 0 ? (
         <p className="font-body text-base italic text-mist/60">
-          Немає фільмів за обраними фільтрами
+          Немає тайтлів за обраними фільтрами
         </p>
       ) : (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-          {items.map((item) => (
-            <div key={item.tmdbId} className="group relative">
-              <MovieCard
-                movie={item.movie!}
-                rating={type === "watched" ? item.rating : undefined}
-              />
-              <button
-                type="button"
-                onClick={() => removeMutation.mutate(item.tmdbId)}
-                disabled={removeMutation.isPending}
-                className="absolute right-1 top-1 rounded-md bg-void/90 px-1.5 py-0.5 font-ui text-[10px] text-blood opacity-0 transition group-hover:opacity-100"
-                title="Прибрати"
+          {items.map((item) => {
+            const cardProps = item.movie
+              ? movieToCardProps(item.movie)
+              : tvToCardProps(item.tv!);
+
+            return (
+              <div
+                key={`${item.mediaType}:${item.tmdbId}`}
+                className="group relative"
               >
-                ×
-              </button>
-            </div>
-          ))}
+                <MediaCard
+                  {...cardProps}
+                  rating={type === "watched" ? item.rating : undefined}
+                />
+                <button
+                  type="button"
+                  onClick={() =>
+                    removeMutation.mutate({
+                      tmdbId: item.tmdbId,
+                      mediaType: item.mediaType,
+                    })
+                  }
+                  disabled={removeMutation.isPending}
+                  className="absolute right-1 top-1 rounded-md bg-void/90 px-1.5 py-0.5 font-ui text-[10px] text-blood opacity-0 transition group-hover:opacity-100"
+                  title={`Прибрати ${getEntryTitle(item)}`}
+                >
+                  ×
+                </button>
+              </div>
+            );
+          })}
         </div>
       )}
     </section>

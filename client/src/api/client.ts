@@ -2,6 +2,7 @@ import type {
   CollectionEntry,
   CollectionSummary,
   CollectionType,
+  MediaType,
   CustomListDetail,
   CustomListSummary,
   DiaryDay,
@@ -92,14 +93,14 @@ export const api = {
     },
     list: (type: CollectionType) =>
       request<CollectionEntry[]>(`/api/collections/${type}`),
-    add: (type: CollectionType, tmdbId: number) =>
+    add: (type: CollectionType, tmdbId: number, mediaType: MediaType = "movie") =>
       request<{ success: boolean; added: boolean }>(
-        `/api/collections/${type}/${tmdbId}`,
+        `/api/collections/${type}/${tmdbId}?mediaType=${mediaType}`,
         { method: "POST" },
       ),
-    remove: (type: CollectionType, tmdbId: number) =>
+    remove: (type: CollectionType, tmdbId: number, mediaType: MediaType = "movie") =>
       request<{ success: boolean; added: boolean }>(
-        `/api/collections/${type}/${tmdbId}`,
+        `/api/collections/${type}/${tmdbId}?mediaType=${mediaType}`,
         { method: "DELETE" },
       ),
     updateWatched: (
@@ -108,6 +109,7 @@ export const api = {
         rating?: number | null;
         notes?: string | null;
         watchedAt?: string | null;
+        mediaType?: MediaType;
       },
     ) =>
       request<{

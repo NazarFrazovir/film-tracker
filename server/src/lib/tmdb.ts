@@ -172,7 +172,7 @@ export async function getMovieExtras(id: number) {
 
   const { directors, writers } = extractKeyCrew(details.credits?.crew ?? []);
 
-  const videos = extractMovieVideos(details);
+  const videos = extractVideos(details);
 
   return {
     trailerKey: videos[0]?.key ?? null,
@@ -346,6 +346,140 @@ export async function searchMovies(query: string, page = 1) {
   });
 }
 
+export interface TMDBTvShow {
+  id: number;
+  name: string;
+  original_name: string;
+  overview: string;
+  poster_path: string | null;
+  backdrop_path: string | null;
+  first_air_date: string;
+  vote_average: number;
+  vote_count: number;
+  popularity: number;
+  genre_ids?: number[];
+  genres?: TMDBGenre[];
+  number_of_seasons?: number;
+  number_of_episodes?: number;
+  status?: string;
+}
+
+export interface TMDBTvShowDetails extends TMDBTvShow {
+  videos?: { results: TMDBVideo[] };
+  credits?: { cast: TMDBCastMember[]; created_by?: TMDBCrewMember[] };
+}
+
+export interface SearchMediaItem {
+  id: number;
+  mediaType: "movie" | "tv";
+  title: string;
+  overview: string;
+  poster_path: string | null;
+  backdrop_path: string | null;
+  release_date: string;
+  vote_average: number;
+}
+
+interface TMDBMultiResult {
+  id: number;
+  media_type: "movie" | "tv" | "person";
+  title?: string;
+  name?: string;
+  overview?: string;
+  poster_path: string | null;
+  backdrop_path?: string | null;
+  release_date?: string;
+  first_air_date?: string;
+  vote_average?: number;
+}
+
+export async function getTvDetails(id: number) {
+  return tmdbFetch<TMDBTvShowDetails>(`/tv/${id}`, {
+    append_to_response: "videos,credits",
+  });
+}
+
+export async function getTvExtras(id: number) {
+  const [details, similar, recommendations] = await Promise.all([
+    tmdbFetch<TMDBTvShowDetails>(`/tv/${id}`, {
+      append_to_response: "videos,credits",
+    }),
+    tmdbFetch<TMDBPaginatedResponse<TMDBTvShow>>(`/tv/${id}/similar`),
+    tmdbFetch<TMDBPaginatedResponse<TMDBTvShow>>(`/tv/${id}/recommendations`),
+  ]);
+
+  const videos = extractVideos(details);
+
+  return {
+    trailerKey: videos[0]?.key ?? null,
+    videos,
+    cast: (details.credits?.cast ?? []).slice(0, 8),
+    creators: (details.credits?.created_by ?? []).slice(0, 4),
+    similar: similar.results.slice(0, 8),
+    recommendations: recommendations.results.slice(0, 8),
+  };
+}
+
+export async function getTvWatchProviders(
+  id: number,
+  region = DEFAULT_WATCH_REGION,
+  title = "",
+) {
+  const data = await tmdbFetch<{ results: Record<string, TMDBWatchProvidersResult> }>(
+    `/tv/${id}/watch/providers`,
+  );
+
+  const regional = data.results[region] ?? data.results.US ?? null;
+  if (!regional) {
+    return { region, link: null, flatrate: [], rent: [], buy: [] };
+  }
+
+  const tmdbLink = regional.link ?? null;
+
+  return {
+    region,
+    link: tmdbLink,
+    flatrate: enrichProviders(regional.flatrate, title, tmdbLink),
+    rent: enrichProviders(regional.rent, title, tmdbLink),
+    buy: enrichProviders(regional.buy, title, tmdbLink),
+  };
+}
+
+export async function searchMulti(query: string, page = 1) {
+  if (!query.trim()) {
+    return { page: 1, results: [], total_pages: 0, total_results: 0 };
+  }
+
+  const data = await tmdbFetch<TMDBPaginatedResponse<TMDBMultiResult>>("/search/multi", {
+    query: query.trim(),
+    page: String(page),
+  });
+
+  const results: SearchMediaItem[] = data.results
+    .filter(
+      (r): r is TMDBMultiResult & { media_type: "movie" | "tv" } =>
+        r.media_type === "movie" || r.media_type === "tv",
+    )
+    .map((r) => ({
+      id: r.id,
+      mediaType: r.media_type,
+      title: (r.media_type === "movie" ? r.title : r.name) ?? "",
+      overview: r.overview ?? "",
+      poster_path: r.poster_path,
+      backdrop_path: r.backdrop_path ?? null,
+      release_date: (r.media_type === "movie" ? r.release_date : r.first_air_date) ?? "",
+      vote_average: r.vote_average ?? 0,
+    }))
+    .filter((r) => r.title && r.poster_path);
+
+  return {
+    page: data.page,
+    total_pages: data.total_pages,
+    total_results: data.total_results,
+    results,
+  };
+}
+
 export interface MovieVideo {
   key: string;
   name: string;
@@ -372,10 +506,10 @@ const VIDEO_TYPE_LABELS: Record<string, string> = {
   Bloopers: "Помилки на зйомці",
 };
 
-export function extractMovieVideos(movie: TMDBMovieDetails): MovieVideo[] {
+function extractVideos(media: { videos?: { results: TMDBVideo[] } }): MovieVideo[] {
   const seen = new Set<string>();
 
-  return (movie.videos?.results ?? [])
+  return (media.videos?.results ?? [])
     .filter((v) => v.site === "YouTube" && v.key)
     .sort((a, b) => {
       const typeDiff =
@@ -399,8 +533,12 @@ export function extractMovieVideos(movie: TMDBMovieDetails): MovieVideo[] {
     }));
 }
 
+export function extractMovieVideos(movie: TMDBMovieDetails): MovieVideo[] {
+  return extractVideos(movie);
+}
+
 export function getTrailerKey(movie: TMDBMovieDetails): string | null {
-  return extractMovieVideos(movie)[0]?.key ?? null;
+  return extractVideos(movie)[0]?.key ?? null;
 }
 
 export function formatYear(date?: string): string | null {

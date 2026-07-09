@@ -5,6 +5,7 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import { DashboardPage } from "./pages/DashboardPage";
 import { LoginPage } from "./pages/LoginPage";
 import { MoviePage } from "./pages/MoviePage";
+import { TvPage } from "./pages/TvPage";
 import { OnboardingPage } from "./pages/OnboardingPage";
 import { RegisterPage } from "./pages/RegisterPage";
 import { SearchPage } from "./pages/SearchPage";
@@ -127,6 +128,7 @@ function AppShell() {
               }
             />
             <Route path="/movie/:id" element={<MoviePage />} />
+            <Route path="/tv/:id" element={<TvPage />} />
             <Route path="/person/:id" element={<PersonPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />

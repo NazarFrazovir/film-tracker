@@ -13,6 +13,7 @@ import tagsRoutes from "./routes/tags.js";
 import dataRoutes from "./routes/data.js";
 import settingsRoutes from "./routes/settings.js";
 import profileRoutes from "./routes/profile.js";
+import tvRoutes from "./routes/tv.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const isProd = process.env.NODE_ENV === "production";
@@ -56,6 +57,7 @@ app.use("/api/tags", tagsRoutes);
 app.use("/api/data", dataRoutes);
 app.use("/api/settings", settingsRoutes);
 app.use("/api/profile", profileRoutes);
+app.use("/api/tv", tvRoutes);
 
 if (isProd) {
   const clientDist = path.join(__dirname, "../../client/dist");

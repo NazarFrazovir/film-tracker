@@ -233,7 +233,7 @@ router.post("/:id/items/:tmdbId", requireAuth, async (req: AuthedRequest, res) =
   });
 
   await prisma.customListItem.upsert({
-    where: { listId_tmdbId: { listId: id, tmdbId } },
+    where: { listId_tmdbId_mediaType: { listId: id, tmdbId, mediaType: "movie" } },
     create: {
       listId: id,
       tmdbId,
@@ -289,7 +289,7 @@ router.patch("/:id/reorder", requireAuth, async (req: AuthedRequest, res) => {
   await prisma.$transaction(
     tmdbIds.map((tmdbId, position) =>
       prisma.customListItem.update({
-        where: { listId_tmdbId: { listId: id, tmdbId } },
+        where: { listId_tmdbId_mediaType: { listId: id, tmdbId, mediaType: "movie" } },
         data: { position },
       }),
     ),

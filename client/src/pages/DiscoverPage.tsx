@@ -59,7 +59,11 @@ export function DiscoverPage() {
         chunks.push(movieIds.slice(i, i + 50));
       }
       const parts = await Promise.all(
-        chunks.map((chunk) => api.movies.statusBatch(chunk)),
+        chunks.map((chunk) =>
+          api.movies.statusBatch(
+            chunk.map((tmdbId) => ({ tmdbId, mediaType: "movie" as const })),
+          ),
+        ),
       );
       return Object.assign({}, ...parts);
     },
@@ -136,7 +140,7 @@ export function DiscoverPage() {
               <SearchMovieCard
                 key={movie.id}
                 movie={movie}
-                initialStatus={statuses?.[movie.id]}
+                initialStatus={statuses?.[`movie:${movie.id}`]}
               />
             ))}
           </div>

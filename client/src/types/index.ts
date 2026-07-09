@@ -31,6 +31,8 @@ export interface UserProfile {
   topRated: { tmdbId: number; rating: number; movie: TMDBMovie | null }[];
 }
 
+export type MediaType = "movie" | "tv";
+
 export interface TMDBMovie {
   id: number;
   title: string;
@@ -43,6 +45,32 @@ export interface TMDBMovie {
   genres?: { id: number; name: string }[];
   runtime?: number;
   tagline?: string;
+}
+
+export interface TMDBTvShow {
+  id: number;
+  name: string;
+  original_name: string;
+  overview: string;
+  poster_path: string | null;
+  backdrop_path: string | null;
+  first_air_date: string;
+  vote_average: number;
+  genres?: { id: number; name: string }[];
+  number_of_seasons?: number;
+  number_of_episodes?: number;
+  status?: string;
+}
+
+export interface SearchMediaItem {
+  id: number;
+  mediaType: MediaType;
+  title: string;
+  overview: string;
+  poster_path: string | null;
+  backdrop_path: string | null;
+  release_date: string;
+  vote_average: number;
 }
 
 export interface TMDBCastMember {
@@ -266,10 +294,12 @@ export type CollectionType = "favorites" | "legendary" | "watchlist" | "watched"
 
 export interface CollectionEntry {
   tmdbId: number;
+  mediaType: MediaType;
   date: string;
   rating: number | null;
   notes: string | null;
   movie: TMDBMovie | null;
+  tv: TMDBTvShow | null;
 }
 
 export interface CollectionSummary {
@@ -285,22 +315,22 @@ export const COLLECTION_META: Record<
 > = {
   favorites: {
     title: "Улюблені",
-    hint: "Фільми, які вам особливо подобаються",
+    hint: "Фільми та серіали, які вам особливо подобаються",
     empty: "Ще немає улюблених — додайте з пошуку",
   },
   legendary: {
     title: "Легендарні",
     hint: "Зала слави — шедеври, що залишаються назавжди",
-    empty: "Додайте свої легендарні фільми",
+    empty: "Додайте свої легендарні тайтли",
   },
   watched: {
     title: "Недавно переглянуті",
     hint: "Що ви вже подивились",
-    empty: "Позначте фільми як переглянуті на їх сторінці",
+    empty: "Позначте фільми або серіали як переглянуті",
   },
   watchlist: {
     title: "Хочу подивитись",
     hint: "Черга на вечір",
-    empty: "Додайте фільми, які плануєте подивитись",
+    empty: "Додайте тайтли, які плануєте подивитись",
   },
 };

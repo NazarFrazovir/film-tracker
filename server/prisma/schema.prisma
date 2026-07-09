@@ -25,35 +25,38 @@ model User {
 }
 
 model Favorite {
-  id      String   @id @default(cuid())
-  userId  String
-  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tmdbId  Int
-  addedAt DateTime @default(now())
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tmdbId    Int
+  mediaType String   @default("movie")
+  addedAt   DateTime @default(now())
 
-  @@unique([userId, tmdbId])
+  @@unique([userId, tmdbId, mediaType])
   @@index([userId])
 }
 
 model Legendary {
-  id      String   @id @default(cuid())
-  userId  String
-  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tmdbId  Int
-  addedAt DateTime @default(now())
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tmdbId    Int
+  mediaType String   @default("movie")
+  addedAt   DateTime @default(now())
 
-  @@unique([userId, tmdbId])
+  @@unique([userId, tmdbId, mediaType])
   @@index([userId])
 }
 
 model WatchlistItem {
-  id      String   @id @default(cuid())
-  userId  String
-  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tmdbId  Int
-  addedAt DateTime @default(now())
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tmdbId    Int
+  mediaType String   @default("movie")
+  addedAt   DateTime @default(now())
 
-  @@unique([userId, tmdbId])
+  @@unique([userId, tmdbId, mediaType])
   @@index([userId])
 }
 
@@ -62,11 +65,12 @@ model WatchedItem {
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   tmdbId    Int
+  mediaType String   @default("movie")
   watchedAt DateTime?
   rating    Int?
   notes     String?
 
-  @@unique([userId, tmdbId])
+  @@unique([userId, tmdbId, mediaType])
   @@index([userId, watchedAt])
 }
 
@@ -89,14 +93,15 @@ model CustomList {
 }
 
 model CustomListItem {
-  id       String     @id @default(cuid())
-  listId   String
-  list     CustomList @relation(fields: [listId], references: [id], onDelete: Cascade)
-  tmdbId   Int
-  position Int        @default(0)
-  addedAt  DateTime   @default(now())
+  id        String     @id @default(cuid())
+  listId    String
+  list      CustomList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  tmdbId    Int
+  mediaType String     @default("movie")
+  position  Int        @default(0)
+  addedAt   DateTime   @default(now())
 
-  @@unique([listId, tmdbId])
+  @@unique([listId, tmdbId, mediaType])
   @@index([listId, position])
 }
 
@@ -113,16 +118,17 @@ model Tag {
 }
 
 model MovieTag {
-  id      String   @id @default(cuid())
-  userId  String
-  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tmdbId  Int
-  tagId   String
-  tag     Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
-  addedAt DateTime @default(now())
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tmdbId    Int
+  mediaType String   @default("movie")
+  tagId     String
+  tag       Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  addedAt   DateTime @default(now())
 
-  @@unique([userId, tmdbId, tagId])
-  @@index([userId, tmdbId])
+  @@unique([userId, tmdbId, mediaType, tagId])
+  @@index([userId, tmdbId, mediaType])
   @@index([tagId])
 }
 
@@ -139,4 +145,20 @@ model CachedMovie {
   tagline      String?
   genres       String   @default("[]")
   cachedAt     DateTime @default(now())
+}
+
+model CachedTvShow {
+  tmdbId          Int      @id
+  name            String
+  originalName    String?
+  overview        String   @default("")
+  posterPath      String?
+  backdropPath    String?
+  firstAirDate    String?
+  voteAverage     Float    @default(0)
+  numberOfSeasons Int?
+  numberOfEpisodes Int?
+  status          String?
+  genres          String   @default("[]")
+  cachedAt        DateTime @default(now())
 }

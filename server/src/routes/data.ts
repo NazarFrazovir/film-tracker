@@ -118,7 +118,7 @@ async function importListItems(listId: string, tmdbIds: number[]) {
   let pos = 0;
   for (const tmdbId of tmdbIds) {
     await prisma.customListItem.upsert({
-      where: { listId_tmdbId: { listId, tmdbId } },
+      where: { listId_tmdbId_mediaType: { listId, tmdbId, mediaType: "movie" } },
       create: { listId, tmdbId, position: pos++ },
       update: {},
     });
@@ -148,8 +148,8 @@ router.post("/import", requireAuth, async (req: AuthedRequest, res) => {
   try {
     for (const tmdbId of data.favorites ?? []) {
       await prisma.favorite.upsert({
-        where: { userId_tmdbId: { userId, tmdbId } },
-        create: { userId, tmdbId },
+        where: { userId_tmdbId_mediaType: { userId, tmdbId, mediaType: "movie" } },
+        create: { userId, tmdbId, mediaType: "movie" },
         update: {},
       });
       stats.favorites++;
@@ -158,8 +158,8 @@ router.post("/import", requireAuth, async (req: AuthedRequest, res) => {
 
     for (const tmdbId of data.legendary ?? []) {
       await prisma.legendary.upsert({
-        where: { userId_tmdbId: { userId, tmdbId } },
-        create: { userId, tmdbId },
+        where: { userId_tmdbId_mediaType: { userId, tmdbId, mediaType: "movie" } },
+        create: { userId, tmdbId, mediaType: "movie" },
         update: {},
       });
       stats.legendary++;
@@ -168,8 +168,8 @@ router.post("/import", requireAuth, async (req: AuthedRequest, res) => {
 
     for (const tmdbId of data.watchlist ?? []) {
       await prisma.watchlistItem.upsert({
-        where: { userId_tmdbId: { userId, tmdbId } },
-        create: { userId, tmdbId },
+        where: { userId_tmdbId_mediaType: { userId, tmdbId, mediaType: "movie" } },
+        create: { userId, tmdbId, mediaType: "movie" },
         update: {},
       });
       stats.watchlist++;
@@ -178,10 +178,11 @@ router.post("/import", requireAuth, async (req: AuthedRequest, res) => {
 
     for (const item of data.watched ?? []) {
       await prisma.watchedItem.upsert({
-        where: { userId_tmdbId: { userId, tmdbId: item.tmdbId } },
+        where: { userId_tmdbId_mediaType: { userId, tmdbId: item.tmdbId, mediaType: "movie" } },
         create: {
           userId,
           tmdbId: item.tmdbId,
+          mediaType: "movie",
           rating: item.rating ?? null,
           notes: item.notes ?? null,
           watchedAt: item.watchedAt ? new Date(item.watchedAt) : null,
@@ -263,7 +264,7 @@ router.post("/import", requireAuth, async (req: AuthedRequest, res) => {
 
       for (const tmdbId of tagData.movies) {
         await prisma.movieTag.upsert({
-          where: { userId_tmdbId_tagId: { userId, tmdbId, tagId: tag.id } },
+          where: { userId_tmdbId_mediaType_tagId: { userId, tmdbId, mediaType: "movie", tagId: tag.id } },
           create: { userId, tmdbId, tagId: tag.id },
           update: {},
         });

@@ -1,16 +1,21 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../api/client";
-import { SearchMovieCard } from "../components/SearchMovieCard";
+import { SearchMediaCard } from "../components/SearchMediaCard";
 import { toast } from "../components/Toast";
-import type { CollectionType } from "../types";
+import { mediaStatusKey } from "../lib/mediaUtils";
+import type { CollectionType, SearchMediaItem } from "../types";
+
+function itemKey(item: SearchMediaItem) {
+  return mediaStatusKey(item.id, item.mediaType);
+}
 
 export function SearchPage() {
   const queryClient = useQueryClient();
   const [query, setQuery] = useState("");
   const [debounced, setDebounced] = useState("");
   const [selectMode, setSelectMode] = useState(false);
-  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const timer = setTimeout(() => setDebounced(query.trim()), 350);
@@ -26,7 +31,7 @@ export function SearchPage() {
     isFetchingNextPage,
   } = useInfiniteQuery({
     queryKey: ["search", debounced],
-    queryFn: ({ pageParam }) => api.movies.search(debounced, pageParam),
+    queryFn: ({ pageParam }) => api.movies.searchMulti(debounced, pageParam),
     initialPageParam: 1,
     getNextPageParam: (lastPage, allPages) => {
       const currentPage = allPages.length;
@@ -40,37 +45,39 @@ export function SearchPage() {
     [data],
   );
 
-  const movieIds = useMemo(() => results.map((m) => m.id), [results]);
-
   const { data: statuses } = useQuery({
-    queryKey: ["search-status", movieIds],
-    queryFn: async () => {
-      const chunks: number[][] = [];
-      for (let i = 0; i < movieIds.length; i += 50) {
-        chunks.push(movieIds.slice(i, i + 50));
-      }
-      const parts = await Promise.all(
-        chunks.map((chunk) => api.movies.statusBatch(chunk)),
-      );
-      return Object.assign({}, ...parts);
-    },
-    enabled: movieIds.length > 0,
+    queryKey: ["search-status", results.map(itemKey)],
+    queryFn: () =>
+      api.movies.statusBatch(
+        results.map((r) => ({ tmdbId: r.id, mediaType: r.mediaType })),
+      ),
+    enabled: results.length > 0,
     staleTime: 30_000,
   });
 
   const bulkMutation = useMutation({
     mutationFn: async ({
       type,
-      ids,
+      keys,
     }: {
       type: CollectionType;
-      ids: number[];
+      keys: string[];
     }) => {
-      await Promise.all(ids.map((id) => api.collections.add(type, id)));
-      return { type, count: ids.length };
+      await Promise.all(
+        keys.map((key) => {
+          const [mediaType, idStr] = key.split(":");
+          const tmdbId = Number(idStr);
+          return api.collections.add(
+            type,
+            tmdbId,
+            mediaType === "tv" ? "tv" : "movie",
+          );
+        }),
+      );
+      return { type, count: keys.length };
     },
     onSuccess: ({ count }) => {
-      toast(`Додано ${count} фільмів`);
+      toast(`Додано ${count} тайтлів`);
       setSelected(new Set());
       setSelectMode(false);
       queryClient.invalidateQueries({ queryKey: ["collection"] });
@@ -80,11 +87,12 @@ export function SearchPage() {
     onError: (err: Error) => toast(err.message),
   });
 
-  function toggleSelect(id: number) {
+  function toggleSelect(item: SearchMediaItem) {
+    const key = itemKey(item);
     setSelected((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
       return next;
     });
   }
@@ -96,9 +104,9 @@ export function SearchPage() {
   return (
     <div className="mx-auto max-w-7xl px-4 pb-20 pt-8 md:px-8 md:pt-12">
       <span className="label">TMDB пошук</span>
-      <h1 className="title-section mt-1">Знайти фільм</h1>
+      <h1 className="title-section mt-1">Знайти фільм або серіал</h1>
       <p className="meta-line mt-2 mb-8">
-        Введіть назву — додайте до будь-якої колекції
+        Фільми та серіали — додайте до будь-якої колекції
         <span className="ml-2 text-mist/50">(/ — фокус на пошук)</span>
       </p>
 
@@ -108,7 +116,7 @@ export function SearchPage() {
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Наприклад: Inception, Титанік..."
+          placeholder="Наприклад: Breaking Bad, Inception..."
           className="input-field max-w-xl flex-1"
           autoFocus
         />
@@ -144,7 +152,7 @@ export function SearchPage() {
                 type="button"
                 disabled={bulkMutation.isPending}
                 onClick={() =>
-                  bulkMutation.mutate({ type, ids: [...selected] })
+                  bulkMutation.mutate({ type, keys: [...selected] })
                 }
                 className="btn-primary rounded-lg px-4 py-2 text-sm"
               >
@@ -175,30 +183,29 @@ export function SearchPage() {
               Знайдено: {totalResults} · показано {results.length}
             </p>
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-              {results.map((movie) => (
-                <div
-                  key={movie.id}
-                  className={`relative ${selectMode ? "bulk-select-wrap" : ""} ${
-                    selected.has(movie.id) ? "bulk-select-wrap--active" : ""
-                  }`}
-                  onClick={
-                    selectMode
-                      ? () => toggleSelect(movie.id)
-                      : undefined
-                  }
-                >
-                  {selectMode && (
-                    <span className="bulk-select-check">
-                      {selected.has(movie.id) ? "✓" : ""}
-                    </span>
-                  )}
-                  <SearchMovieCard
-                    movie={movie}
-                    initialStatus={statuses?.[movie.id]}
-                    actionsDisabled={selectMode}
-                  />
-                </div>
-              ))}
+              {results.map((item) => {
+                const key = itemKey(item);
+                return (
+                  <div
+                    key={key}
+                    className={`relative ${selectMode ? "bulk-select-wrap" : ""} ${
+                      selected.has(key) ? "bulk-select-wrap--active" : ""
+                    }`}
+                    onClick={selectMode ? () => toggleSelect(item) : undefined}
+                  >
+                    {selectMode && (
+                      <span className="bulk-select-check">
+                        {selected.has(key) ? "✓" : ""}
+                      </span>
+                    )}
+                    <SearchMediaCard
+                      item={item}
+                      initialStatus={statuses?.[key]}
+                      actionsDisabled={selectMode}
+                    />
+                  </div>
+                );
+              })}
             </div>
             {hasNextPage && (
               <div className="mt-10 text-center">

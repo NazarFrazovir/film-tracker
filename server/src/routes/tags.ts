@@ -112,7 +112,7 @@ router.put("/movie/:tmdbId", requireAuth, async (req: AuthedRequest, res) => {
     });
 
     await prisma.movieTag.create({
-      data: { userId, tmdbId, tagId: tag.id },
+      data: { userId, tmdbId, mediaType: "movie", tagId: tag.id },
     });
 
     resultTags.push({ id: tag.id, name: tag.name });

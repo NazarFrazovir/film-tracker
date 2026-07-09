@@ -1,10 +1,12 @@
 import type {
   CollectionState,
   DiscoverFilters,
+  MediaType,
   MovieExtras,
   MovieWatchProviders,
   MovieTag,
   PersonFilmCredit,
+  SearchMediaItem,
   TMDBMovie,
   TMDBPerson,
 } from "../types";
@@ -17,6 +19,13 @@ export const moviesApi = {
       total_pages: number;
       total_results: number;
     }>(`/api/movies/search?q=${encodeURIComponent(q)}&page=${page}`),
+
+  searchMulti: (q: string, page = 1) =>
+    request<{
+      results: SearchMediaItem[];
+      total_pages: number;
+      total_results: number;
+    }>(`/api/movies/search/multi?q=${encodeURIComponent(q)}&page=${page}`),
 
   get: (tmdbId: number) =>
     request<{
@@ -34,10 +43,10 @@ export const moviesApi = {
       `/api/movies/${tmdbId}/providers?region=${encodeURIComponent(region)}`,
     ),
 
-  statusBatch: (tmdbIds: number[]) =>
+  statusBatch: (items: { tmdbId: number; mediaType: MediaType }[]) =>
     request<
       Record<
-        number,
+        string,
         {
           favorites: boolean;
           legendary: boolean;
@@ -47,7 +56,7 @@ export const moviesApi = {
       >
     >("/api/movies/status/batch", {
       method: "POST",
-      body: JSON.stringify({ tmdbIds }),
+      body: JSON.stringify({ items }),
     }),
 
   genres: () =>

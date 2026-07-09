@@ -2,12 +2,13 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
-import type { CollectionState, CollectionType } from "../types";
+import type { CollectionState, CollectionType, MediaType } from "../types";
 import { StarRating } from "./StarRating";
 import { toast } from "./Toast";
 
 interface MovieActionsProps {
   tmdbId: number;
+  mediaType?: MediaType;
   initial: CollectionState;
   isLoggedIn: boolean;
 }
@@ -23,7 +24,12 @@ function toDateInput(iso: string | null): string {
   return iso.slice(0, 10);
 }
 
-export function MovieActions({ tmdbId, initial, isLoggedIn }: MovieActionsProps) {
+export function MovieActions({
+  tmdbId,
+  mediaType = "movie",
+  initial,
+  isLoggedIn,
+}: MovieActionsProps) {
   const queryClient = useQueryClient();
   const [state, setState] = useState(initial);
   const [rating, setRating] = useState<number | null>(initial.rating);
@@ -41,10 +47,10 @@ export function MovieActions({ tmdbId, initial, isLoggedIn }: MovieActionsProps)
   const toggleMutation = useMutation({
     mutationFn: async (type: CollectionType) => {
       if (state[type]) {
-        await api.collections.remove(type, tmdbId);
+        await api.collections.remove(type, tmdbId, mediaType);
         return { type, added: false };
       }
-      await api.collections.add(type, tmdbId);
+      await api.collections.add(type, tmdbId, mediaType);
       return { type, added: true };
     },
     onSuccess: ({ type, added }) => {
@@ -58,10 +64,10 @@ export function MovieActions({ tmdbId, initial, isLoggedIn }: MovieActionsProps)
   const watchedMutation = useMutation({
     mutationFn: async () => {
       if (state.watched) {
-        await api.collections.remove("watched", tmdbId);
+        await api.collections.remove("watched", tmdbId, mediaType);
         return { removed: true as const };
       }
-      await api.collections.add("watched", tmdbId);
+      await api.collections.add("watched", tmdbId, mediaType);
       return { removed: false as const };
     },
     onSuccess: (result) => {
@@ -92,6 +98,7 @@ export function MovieActions({ tmdbId, initial, isLoggedIn }: MovieActionsProps)
         rating,
         notes: notes || null,
         watchedAt: watchedDate.trim() ? watchedDate : null,
+        mediaType,
       }),
     onSuccess: (data) => {
       setState((s) => ({

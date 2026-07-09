@@ -1,7 +1,10 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
-import { getMovieCached, getMoviesCached, warmCache } from "../lib/movieCache.js";
+import { enrichCollectionItems } from "../lib/mediaEnrich.js";
+import { parseMediaType, type MediaType } from "../lib/mediaType.js";
+import { warmCache } from "../lib/movieCache.js";
+import { warmTvCache } from "../lib/tvCache.js";
 import { requireAuth, type AuthedRequest } from "../middleware/auth.js";
 
 const router = Router();
@@ -13,23 +16,14 @@ function isCollectionType(value: string): value is CollectionType {
   return (COLLECTION_TYPES as readonly string[]).includes(value);
 }
 
-async function enrichItems(
-  items: {
-    tmdbId: number;
-    date: Date | null;
-    rating?: number | null;
-    notes?: string | null;
-  }[],
-) {
-  const movieMap = await getMoviesCached(items.map((i) => i.tmdbId));
+function mediaTypeFromReq(req: { query: Record<string, unknown>; body?: unknown }): MediaType {
+  const body = req.body as { mediaType?: unknown } | undefined;
+  return parseMediaType(req.query.mediaType ?? body?.mediaType);
+}
 
-  return items.map((item) => ({
-    tmdbId: item.tmdbId,
-    date: item.date?.toISOString() ?? "",
-    rating: item.rating ?? null,
-    notes: item.notes ?? null,
-    movie: movieMap.get(item.tmdbId) ?? null,
-  }));
+function warmMedia(tmdbId: number, mediaType: MediaType) {
+  if (mediaType === "tv") warmTvCache(tmdbId);
+  else warmCache(tmdbId);
 }
 
 router.get("/summary", requireAuth, async (req: AuthedRequest, res) => {
@@ -50,10 +44,10 @@ router.get("/hero", requireAuth, async (req: AuthedRequest, res) => {
 
   try {
     const legendary = await prisma.legendary.findMany({ where: { userId } });
-    let tmdbId: number | null = null;
+    let pick: { tmdbId: number; mediaType: string } | null = null;
 
     if (legendary.length > 0) {
-      tmdbId = legendary[Math.floor(Math.random() * legendary.length)]!.tmdbId;
+      pick = legendary[Math.floor(Math.random() * legendary.length)]!;
     } else {
       const topWatched = await prisma.watchedItem.findMany({
         where: { userId },
@@ -61,19 +55,28 @@ router.get("/hero", requireAuth, async (req: AuthedRequest, res) => {
         take: 8,
       });
       if (topWatched.length > 0) {
-        tmdbId = topWatched[Math.floor(Math.random() * topWatched.length)]!.tmdbId;
+        pick = topWatched[Math.floor(Math.random() * topWatched.length)]!;
       }
     }
 
-    if (!tmdbId) {
-      res.json({ movie: null });
+    if (!pick) {
+      res.json({ movie: null, tv: null, mediaType: null });
       return;
     }
 
-    const movie = await getMovieCached(tmdbId);
-    res.json({ movie, tmdbId });
+    const mediaType = parseMediaType(pick.mediaType);
+    const [enriched] = await enrichCollectionItems([
+      { tmdbId: pick.tmdbId, mediaType, date: null },
+    ]);
+
+    res.json({
+      movie: enriched.movie,
+      tv: enriched.tv,
+      mediaType,
+      tmdbId: pick.tmdbId,
+    });
   } catch {
-    res.json({ movie: null });
+    res.json({ movie: null, tv: null, mediaType: null });
   }
 });
 
@@ -90,21 +93,34 @@ router.get("/tonight", requireAuth, async (req: AuthedRequest, res) => {
     });
 
     if (items.length === 0) {
-      res.json({ movie: null, poolSize: 0 });
+      res.json({ movie: null, tv: null, mediaType: null, poolSize: 0 });
       return;
     }
 
-    const movieMap = await getMoviesCached(items.map((i) => i.tmdbId));
+    const enriched = await enrichCollectionItems(
+      items.map((i) => ({
+        tmdbId: i.tmdbId,
+        mediaType: parseMediaType(i.mediaType),
+        date: i.addedAt,
+      })),
+    );
 
-    let candidates = items.filter((item) => {
-      const movie = movieMap.get(item.tmdbId);
-      if (!movie) return false;
-      if (genre && !movie.genres?.some((g) => g.name === genre)) return false;
-      if (maxRuntime > 0 && movie.runtime != null && movie.runtime > maxRuntime) {
-        return false;
-      }
-      return true;
-    });
+    let candidates = enriched.filter((item) => item.movie || item.tv);
+
+    if (genre) {
+      candidates = candidates.filter((item) => {
+        const genres = item.movie?.genres ?? item.tv?.genres ?? [];
+        return genres.some((g) => g.name === genre);
+      });
+    }
+
+    if (maxRuntime > 0) {
+      candidates = candidates.filter((item) => {
+        if (item.mediaType === "tv") return true;
+        const runtime = item.movie?.runtime;
+        return runtime == null || runtime <= maxRuntime;
+      });
+    }
 
     if (preferOld && candidates.length > 1) {
       const half = Math.max(1, Math.ceil(candidates.length / 2));
@@ -112,15 +128,20 @@ router.get("/tonight", requireAuth, async (req: AuthedRequest, res) => {
     }
 
     if (candidates.length === 0) {
-      res.json({ movie: null, poolSize: 0 });
+      res.json({ movie: null, tv: null, mediaType: null, poolSize: 0 });
       return;
     }
 
     const pick = candidates[Math.floor(Math.random() * candidates.length)]!;
-    const movie = movieMap.get(pick.tmdbId) ?? (await getMovieCached(pick.tmdbId));
-    res.json({ movie, tmdbId: pick.tmdbId, poolSize: candidates.length });
+    res.json({
+      movie: pick.movie,
+      tv: pick.tv,
+      mediaType: pick.mediaType,
+      tmdbId: pick.tmdbId,
+      poolSize: candidates.length,
+    });
   } catch {
-    res.json({ movie: null, poolSize: 0 });
+    res.json({ movie: null, tv: null, mediaType: null, poolSize: 0 });
   }
 });
 
@@ -140,7 +161,15 @@ router.get("/:type", requireAuth, async (req: AuthedRequest, res) => {
           where: { userId },
           orderBy: { addedAt: "desc" },
         });
-        res.json(await enrichItems(items.map((i) => ({ tmdbId: i.tmdbId, date: i.addedAt }))));
+        res.json(
+          await enrichCollectionItems(
+            items.map((i) => ({
+              tmdbId: i.tmdbId,
+              mediaType: parseMediaType(i.mediaType),
+              date: i.addedAt,
+            })),
+          ),
+        );
         return;
       }
       case "legendary": {
@@ -148,7 +177,15 @@ router.get("/:type", requireAuth, async (req: AuthedRequest, res) => {
           where: { userId },
           orderBy: { addedAt: "desc" },
         });
-        res.json(await enrichItems(items.map((i) => ({ tmdbId: i.tmdbId, date: i.addedAt }))));
+        res.json(
+          await enrichCollectionItems(
+            items.map((i) => ({
+              tmdbId: i.tmdbId,
+              mediaType: parseMediaType(i.mediaType),
+              date: i.addedAt,
+            })),
+          ),
+        );
         return;
       }
       case "watchlist": {
@@ -156,7 +193,15 @@ router.get("/:type", requireAuth, async (req: AuthedRequest, res) => {
           where: { userId },
           orderBy: { addedAt: "desc" },
         });
-        res.json(await enrichItems(items.map((i) => ({ tmdbId: i.tmdbId, date: i.addedAt }))));
+        res.json(
+          await enrichCollectionItems(
+            items.map((i) => ({
+              tmdbId: i.tmdbId,
+              mediaType: parseMediaType(i.mediaType),
+              date: i.addedAt,
+            })),
+          ),
+        );
         return;
       }
       case "watched": {
@@ -165,9 +210,10 @@ router.get("/:type", requireAuth, async (req: AuthedRequest, res) => {
           orderBy: { watchedAt: "desc" },
         });
         res.json(
-          await enrichItems(
+          await enrichCollectionItems(
             items.map((i) => ({
               tmdbId: i.tmdbId,
+              mediaType: parseMediaType(i.mediaType),
               date: i.watchedAt,
               rating: i.rating,
               notes: i.notes,
@@ -186,45 +232,48 @@ router.post("/:type/:tmdbId", requireAuth, async (req: AuthedRequest, res) => {
   const type = String(req.params.type);
   const tmdbId = Number(req.params.tmdbId);
   const userId = req.user!.userId;
+  const mediaType = mediaTypeFromReq(req);
 
   if (!isCollectionType(type) || !Number.isFinite(tmdbId)) {
     res.status(400).json({ error: "Невірні параметри" });
     return;
   }
 
+  const where = { userId_tmdbId_mediaType: { userId, tmdbId, mediaType } };
+
   try {
     switch (type) {
       case "favorites":
         await prisma.favorite.upsert({
-          where: { userId_tmdbId: { userId, tmdbId } },
-          create: { userId, tmdbId },
+          where,
+          create: { userId, tmdbId, mediaType },
           update: {},
         });
         break;
       case "legendary":
         await prisma.legendary.upsert({
-          where: { userId_tmdbId: { userId, tmdbId } },
-          create: { userId, tmdbId },
+          where,
+          create: { userId, tmdbId, mediaType },
           update: {},
         });
         break;
       case "watchlist":
         await prisma.watchlistItem.upsert({
-          where: { userId_tmdbId: { userId, tmdbId } },
-          create: { userId, tmdbId },
+          where,
+          create: { userId, tmdbId, mediaType },
           update: {},
         });
         break;
       case "watched":
         await prisma.watchedItem.upsert({
-          where: { userId_tmdbId: { userId, tmdbId } },
-          create: { userId, tmdbId },
+          where,
+          create: { userId, tmdbId, mediaType },
           update: {},
         });
         break;
     }
 
-    warmCache(tmdbId);
+    warmMedia(tmdbId, mediaType);
     res.json({ success: true, added: true });
   } catch {
     res.status(500).json({ error: "Не вдалося додати" });
@@ -235,6 +284,7 @@ router.delete("/:type/:tmdbId", requireAuth, async (req: AuthedRequest, res) => 
   const type = String(req.params.type);
   const tmdbId = Number(req.params.tmdbId);
   const userId = req.user!.userId;
+  const mediaType = mediaTypeFromReq(req);
 
   if (!isCollectionType(type) || !Number.isFinite(tmdbId)) {
     res.status(400).json({ error: "Невірні параметри" });
@@ -242,18 +292,19 @@ router.delete("/:type/:tmdbId", requireAuth, async (req: AuthedRequest, res) => 
   }
 
   try {
+    const where = { userId, tmdbId, mediaType };
     switch (type) {
       case "favorites":
-        await prisma.favorite.deleteMany({ where: { userId, tmdbId } });
+        await prisma.favorite.deleteMany({ where });
         break;
       case "legendary":
-        await prisma.legendary.deleteMany({ where: { userId, tmdbId } });
+        await prisma.legendary.deleteMany({ where });
         break;
       case "watchlist":
-        await prisma.watchlistItem.deleteMany({ where: { userId, tmdbId } });
+        await prisma.watchlistItem.deleteMany({ where });
         break;
       case "watched":
-        await prisma.watchedItem.deleteMany({ where: { userId, tmdbId } });
+        await prisma.watchedItem.deleteMany({ where });
         break;
     }
 
@@ -272,6 +323,7 @@ const watchedPatchSchema = z.object({
       z.null(),
     ])
     .optional(),
+  mediaType: z.enum(["movie", "tv"]).optional(),
 });
 
 router.patch("/watched/:tmdbId", requireAuth, async (req: AuthedRequest, res) => {
@@ -284,12 +336,14 @@ router.patch("/watched/:tmdbId", requireAuth, async (req: AuthedRequest, res) =>
     return;
   }
 
+  const mediaType = parseMediaType(parsed.data.mediaType ?? req.query.mediaType);
+
   const existing = await prisma.watchedItem.findUnique({
-    where: { userId_tmdbId: { userId, tmdbId } },
+    where: { userId_tmdbId_mediaType: { userId, tmdbId, mediaType } },
   });
 
   if (!existing) {
-    res.status(404).json({ error: "Спочатку позначте фільм як переглянутий" });
+    res.status(404).json({ error: "Спочатку позначте як переглянуте" });
     return;
   }
 

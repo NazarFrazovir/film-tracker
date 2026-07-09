@@ -1457,6 +1457,33 @@ button.star-rating__star:hover {
   color: var(--color-ember-light);
 }
 
+/* ── Media badge ── */
+.media-badge {
+  position: absolute;
+  left: 0.4rem;
+  bottom: 0.4rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 0.35rem;
+  font-family: var(--font-ui);
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-fog);
+  background: rgba(42, 31, 61, 0.92);
+  border: 1px solid rgba(201, 162, 39, 0.3);
+}
+
+.media-badge--tv {
+  color: var(--color-ember-light);
+}
+
+.media-badge--poster {
+  left: 0.5rem;
+  bottom: 0.5rem;
+  font-size: 0.55rem;
+}
+
 /* ── Movie videos ── */
 .movie-videos__active-meta {
   display: flex;
