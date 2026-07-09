@@ -23,13 +23,20 @@ function ProviderGroup({
         {providers.map((p) => {
           const logo = providerLogo(p.logo_path);
           return (
-            <div key={p.provider_id} className="watch-providers__item" title={p.provider_name}>
+            <a
+              key={p.provider_id}
+              href={p.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="watch-providers__item"
+              title={`${p.provider_name} — відкрити`}
+            >
               {logo ? (
                 <img src={logo} alt={p.provider_name} className="watch-providers__logo" />
               ) : (
                 <span className="watch-providers__fallback">{p.provider_name}</span>
               )}
-            </div>
+            </a>
           );
         })}
       </div>

@@ -347,7 +347,8 @@ router.get("/:tmdbId/providers", async (req, res) => {
   const region = String(req.query.region ?? "UA").toUpperCase();
 
   try {
-    const providers = await getMovieWatchProviders(tmdbId, region);
+    const movie = await getMovieCached(tmdbId);
+    const providers = await getMovieWatchProviders(tmdbId, region, movie.title);
     res.json(providers);
   } catch {
     res.status(502).json({ error: "Не вдалося завантажити провайдерів" });

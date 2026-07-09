@@ -64,6 +64,15 @@ export interface WatchProvider {
   provider_id: number;
   provider_name: string;
   logo_path: string | null;
+  url: string;
+}
+
+export interface MovieVideo {
+  key: string;
+  name: string;
+  type: string;
+  typeLabel: string;
+  official: boolean;
 }
 
 export interface MovieWatchProviders {
@@ -110,6 +119,7 @@ export interface ListTemplate {
 
 export interface MovieExtras {
   trailerKey: string | null;
+  videos: MovieVideo[];
   cast: TMDBCastMember[];
   directors: TMDBCrewMember[];
   writers: TMDBCrewMember[];

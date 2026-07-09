@@ -11,7 +11,7 @@ import { TagEditor } from "../components/TagEditor";
 import { RatingBadge } from "../components/RatingBadge";
 import { RatingCompare } from "../components/RatingCompare";
 import { MovieRow } from "../components/MovieRow";
-import { TrailerPlayer } from "../components/TrailerPlayer";
+import { MovieVideos } from "../components/MovieVideos";
 import { useAuth } from "../context/AuthContext";
 
 export function MoviePage() {
@@ -183,14 +183,8 @@ export function MoviePage() {
           </div>
         </div>
 
-        {extras?.trailerKey && (
-          <section className="mt-14">
-            <span className="label">Відео</span>
-            <h2 className="title-section mt-1 mb-6">Трейлер</h2>
-            <div className="max-w-3xl">
-              <TrailerPlayer trailerKey={extras.trailerKey} title={movie.title} />
-            </div>
-          </section>
+        {extras?.videos && extras.videos.length > 0 && (
+          <MovieVideos videos={extras.videos} movieTitle={movie.title} />
         )}
 
         {extras?.cast && <CastRow cast={extras.cast} />}

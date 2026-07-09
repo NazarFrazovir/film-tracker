@@ -172,8 +172,11 @@ export async function getMovieExtras(id: number) {
 
   const { directors, writers } = extractKeyCrew(details.credits?.crew ?? []);
 
+  const videos = extractMovieVideos(details);
+
   return {
-    trailerKey: getTrailerKey(details),
+    trailerKey: videos[0]?.key ?? null,
+    videos,
     cast: (details.credits?.cast ?? []).slice(0, 8),
     directors,
     writers,
@@ -184,7 +187,61 @@ export async function getMovieExtras(id: number) {
 
 const DEFAULT_WATCH_REGION = "UA";
 
-export async function getMovieWatchProviders(id: number, region = DEFAULT_WATCH_REGION) {
+export interface EnrichedWatchProvider extends TMDBWatchProvider {
+  url: string;
+}
+
+function getProviderWatchUrl(
+  providerId: number,
+  title: string,
+  tmdbLink: string | null,
+): string {
+  const q = encodeURIComponent(title);
+  const known: Record<number, string> = {
+    2: `https://tv.apple.com/search?term=${q}`,
+    3: `https://play.google.com/store/search?q=${q}&c=movies`,
+    8: `https://www.netflix.com/search?q=${q}`,
+    35: `https://www.rakuten.tv/uk/search/${q}`,
+    119: `https://www.primevideo.com/search?phrase=${q}`,
+    337: `https://www.disneyplus.com/search?q=${q}`,
+    350: `https://tv.apple.com/search?term=${q}`,
+    384: `https://www.max.com/search?q=${q}`,
+    1899: `https://www.max.com/search?q=${q}`,
+    2173: `https://megogo.net/ua/search?q=${q}`,
+    2330: `https://megogo.net/ua/search?q=${q}`,
+    331: `https://sweet.tv/ua/search?q=${q}`,
+    423: `https://www.hulu.com/search?q=${q}`,
+    431: `https://www.paramountplus.com/search?q=${q}`,
+    521: `https://www.danet.one/search?q=${q}`,
+    584: `https://www.mubi.com/search/films?query=${q}`,
+    1904: `https://www.cineplus.ua/search?q=${q}`,
+  };
+
+  return (
+    known[providerId] ??
+    tmdbLink ??
+    `https://www.justwatch.com/ua/search?q=${q}`
+  );
+}
+
+function enrichProviders(
+  list: TMDBWatchProvider[] = [],
+  title: string,
+  tmdbLink: string | null,
+): EnrichedWatchProvider[] {
+  return [...list]
+    .sort((a, b) => a.display_priority - b.display_priority)
+    .map((p) => ({
+      ...p,
+      url: getProviderWatchUrl(p.provider_id, title, tmdbLink),
+    }));
+}
+
+export async function getMovieWatchProviders(
+  id: number,
+  region = DEFAULT_WATCH_REGION,
+  title = "",
+) {
   const data = await tmdbFetch<{ results: Record<string, TMDBWatchProvidersResult> }>(
     `/movie/${id}/watch/providers`,
   );
@@ -194,15 +251,14 @@ export async function getMovieWatchProviders(id: number, region = DEFAULT_WATCH_
     return { region, link: null, flatrate: [], rent: [], buy: [] };
   }
 
-  const sortProviders = (list: TMDBWatchProvider[] = []) =>
-    [...list].sort((a, b) => a.display_priority - b.display_priority);
+  const tmdbLink = regional.link ?? null;
 
   return {
     region,
-    link: regional.link ?? null,
-    flatrate: sortProviders(regional.flatrate),
-    rent: sortProviders(regional.rent),
-    buy: sortProviders(regional.buy),
+    link: tmdbLink,
+    flatrate: enrichProviders(regional.flatrate, title, tmdbLink),
+    rent: enrichProviders(regional.rent, title, tmdbLink),
+    buy: enrichProviders(regional.buy, title, tmdbLink),
   };
 }
 
@@ -290,13 +346,61 @@ export async function searchMovies(query: string, page = 1) {
   });
 }
 
+export interface MovieVideo {
+  key: string;
+  name: string;
+  type: string;
+  typeLabel: string;
+  official: boolean;
+}
+
+const VIDEO_TYPE_ORDER: Record<string, number> = {
+  Trailer: 0,
+  Teaser: 1,
+  Clip: 2,
+  Featurette: 3,
+  "Behind the Scenes": 4,
+  Bloopers: 5,
+};
+
+const VIDEO_TYPE_LABELS: Record<string, string> = {
+  Trailer: "Трейлер",
+  Teaser: "Тизер",
+  Clip: "Кліп",
+  Featurette: "Фічуретка",
+  "Behind the Scenes": "За лаштунками",
+  Bloopers: "Помилки на зйомці",
+};
+
+export function extractMovieVideos(movie: TMDBMovieDetails): MovieVideo[] {
+  const seen = new Set<string>();
+
+  return (movie.videos?.results ?? [])
+    .filter((v) => v.site === "YouTube" && v.key)
+    .sort((a, b) => {
+      const typeDiff =
+        (VIDEO_TYPE_ORDER[a.type] ?? 99) - (VIDEO_TYPE_ORDER[b.type] ?? 99);
+      if (typeDiff !== 0) return typeDiff;
+      if (a.official !== b.official) return a.official ? -1 : 1;
+      return a.name.localeCompare(b.name, "uk");
+    })
+    .filter((v) => {
+      if (seen.has(v.key)) return false;
+      seen.add(v.key);
+      return true;
+    })
+    .slice(0, 12)
+    .map((v) => ({
+      key: v.key,
+      name: v.name,
+      type: v.type,
+      typeLabel: VIDEO_TYPE_LABELS[v.type] ?? v.type,
+      official: v.official,
+    }));
+}
+
 export function getTrailerKey(movie: TMDBMovieDetails): string | null {
-  const videos = movie.videos?.results ?? [];
-  const trailer =
-    videos.find((v) => v.site === "YouTube" && v.type === "Trailer" && v.official) ??
-    videos.find((v) => v.site === "YouTube" && v.type === "Trailer") ??
-    videos.find((v) => v.site === "YouTube");
-  return trailer?.key ?? null;
+  return extractMovieVideos(movie)[0]?.key ?? null;
 }
 
 export function formatYear(date?: string): string | null {
